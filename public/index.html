@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Threejs OBJ Browser</title>
+	<script defer src="bundle.js"></script>
+	<link rel="stylesheet" href="style.css" /> 
+</head>
+<body>
+	<p style="text-align:center">Drag Mouse to change view, Keys - m: to add a Point, next point will be connected by line, z: to toggle Zoom, highlight Objects or Lines in the Left Panel</p>
+
+	<div style="text-align:center">
+		<p style="margin:0"></p>
+		<p style="margin:0"></p>
+	</div>
+	<div class="main">
+		<div id="infoDiv" class="controls">
+
+		</div>
+		<div id="canvas">
+			<div id="label01"></div>
+			<div id="label02"></div>
+		</div>
+		<div class="controls">
+			<p style="text-align:center; margin:5px; word-break:keep-all">Objects were loaded from a TinkerCad file</p>
+			<div id="lineObject"></div>
+			<div id="mouseObject"></div>
+		</div>
+		<div class="armSliders">
+			<p style="text-align:center">Sliders for Arm Motion</p>
+			<span>01<input type="range" min="1" max="100" value="50" class="slider" id="joint01"></span>
+			<span>02<input type="range" min="1" max="100" value="50" class="slider" id="joint02"></span>
+			<span>03<input type="range" min="1" max="100" value="50" class="slider" id="joint03"></span>
+			<span>04<input type="range" min="1" max="100" value="50" class="slider" id="joint04"></span>
+			<span>05<input type="range" min="1" max="100" value="50" class="slider" id="joint05"></span>
+			<span>06<input type="range" min="1" max="100" value="50" class="slider" id="joint06"></span>
+			<span>07<input type="range" min="1" max="100" value="50" class="slider" id="joint07"></span>
+			<span>rail<input type="range" min="1" max="100" value="50" class="slider" id="joint08"></span>
+		</div>
+
+	</div>
+
+</body>
+</html>
