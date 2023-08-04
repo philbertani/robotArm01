@@ -205,7 +205,7 @@ class GPU {
         label.style.display = "none";
         this.labels.push(label);
 
-        object.name = "Object #" + objNumAlias; //this.objNum;
+        object.name = "Object #" + objNumAlias;
         ///console.log("xxx",this.objNum, objNumMap[this.objNum]);
         object.userData.id = objNumAlias;
         object.userData.origNum = this.objNum;
@@ -227,7 +227,7 @@ class GPU {
     function subtractBaryCenter(object) {
       //the object's vertices coming from TinkerCad are all relative to 0,0,0
       //need to make them relative to its own center
-      console.log('sb ',object.name, object.userData);
+      //console.log('sb ',object.name, object.userData);
 
       if ( !object.geometry ) return;
 
@@ -254,7 +254,7 @@ class GPU {
 
       //now finally move the child into the correct position
       const parentPosition = this.baryCenters[ this.invObjNumMap[parents[object.userData.id]] ];
-      console.log( "parent pos ",object.userData.id, parentPosition)
+      //console.log( "parent pos ",object.userData.id, parentPosition)
       
       if (parentPosition) {
         object.position.set( baryTmp.x - parentPosition.x, 
@@ -323,17 +323,10 @@ class GPU {
         this.jointSliders.push(document.getElementById("joint0"+i));
       }
 
-      console.log("joint sliders",this.jointSliders);
-      //this.joints = [22,13,11,14,6,17];
-      this.joints = [22,13,11,14,8,17]; //the object numbers of the joints in order from 0 to 4 (1-5 for user)
+      //console.log("joint sliders",this.jointSliders);
+      this.joints = [22,13,11,14,8,17]; //the tinkercad object numbers of the joints in order from 0 to 4 (1-5 for user)
 
       this.fortyfiveXZ = new THREE.Vector3(-.9,0,1).normalize();
-
-      //this.objects[22].setRotationFromAxisAngle(this.fortyfiveXZ,1.5);
-      //this.objects[13].rotation.y -= Math.PI/4;;
-      //this.objects[11].rotation.y -= 1.7;
-      //this.objects[14].rotation.y += 2.1;
-      //this.objects[17].rotation.z = Math.PI/2;  //the grabber parent joint
 
       this.currentBigMouseSphere = new THREE.Mesh(this.bigSphere,this.selectPointMaterial);
       this.currentBigMouseSphere.visible = false;
@@ -397,7 +390,6 @@ class GPU {
       endRail4.position.y = -210;
       this.scene.add(endRail4);
 
-
       const rootPos = this.objects[20].position;
       const supportGeo = new THREE.CylinderGeometry( 6, 6, 24, 32 );
       const supportMat = new THREE.MeshPhongMaterial( 
@@ -419,6 +411,8 @@ class GPU {
 
       const axesHelper = new THREE.AxesHelper( 200 );
       this.scene.add( axesHelper );
+ 
+      this.prevAngles = Array(this.objects.length).fill(0);
 
       function checkObjId(str) {
         if (str[0]==="o") {  //id starts with (o)bject
@@ -468,7 +462,6 @@ class GPU {
     }
 
     function checkMouse(ev) {
-      //console.log(ev.clientX)
       const rect = this.canvas.getBoundingClientRect();
       //mouse coords are always in terms of whole screen so need to
       //subtract by top left corner of canvas
@@ -518,20 +511,18 @@ class GPU {
 
   setParents() {
 
-    console.log("trying to set parents xxx",this.objects);
+    //console.log("trying to set parents xxx",this.objects);
 
     const origOrder = Object.keys(this.invObjNumMap);
 
     for (let i=1; i<origOrder.length; i++) {
-        console.log("parent of ",this.invObjNumMap[i]," is ", this.invObjNumMap[parents[i]]);
+        //console.log("parent of ",this.invObjNumMap[i]," is ", this.invObjNumMap[parents[i]]);
         //this.objects[ this.invObjNumMap[parents[i]] ].attach( this.objects[ this.invObjNumMap[i]] );
         this.objects[ this.invObjNumMap[parents[i]] ].add( this.objects[ this.invObjNumMap[i]] );
     }
-
   }
 
   computeBaryCenter(vertices) {
-    //console.log('vvvvvvvvvv',vertices);
     //vertices is actually Float32BufferAttribute object
     const dim = vertices.itemSize;
     const n = vertices.count;
@@ -759,6 +750,10 @@ class GPU {
     textElem.style.zIndex = ((-tempV.z * 0.5 + 0.5) * 100000) | 0;
   }
 
+  SV(n) { //stupid function to process slider values
+    return this.jointSliders[n].value/50-1;
+  }
+
   render() {
     console.log("in render");
     let prevRenderTime = Date.now();
@@ -809,7 +804,6 @@ class GPU {
 
           if (point.object.edgeLength) {
             this.lineObjectElem.innerHTML = "";
-            //console.log("length is:",point.object.edgeLength)
             this.lineObjectElem.innerHTML = "<p>" +
               "<br>Line # and Length is: " + point.object.index + ", " + Math.trunc(point.object.edgeLength*1000)/1000;
               + "/p>"
@@ -894,7 +888,6 @@ class GPU {
         }
       }
 
-      
       if (this.highlightObject) {
         const i = this.highlightObject;
         const obj = this.objects[i];
@@ -913,23 +906,35 @@ class GPU {
         this.setTextOrtho(textElem, obj.position, text);
       }
       
-      //this.objects[24].setRotationFromAxisAngle(this.fortyfiveXZ,time);
-      //this.objects[13].rotation.y -= .01;
+      //this.SV is the function to retrieve (S)lider (V)alues
+      const baseJoint = this.joints[0]; //object #20
+      this.objects[baseJoint].setRotationFromAxisAngle(this.fortyfiveXZ,this.SV(0)*Math.PI);
 
-      const baseJoint = this.joints[0];
-      this.objects[baseJoint].setRotationFromAxisAngle(this.fortyfiveXZ,(this.jointSliders[0].value/50-1)*Math.PI);
-
-      for (let i=1; i<4; i++) {
-        this.objects[this.joints[i]].rotation.y = (this.jointSliders[i].value/50-1)*Math.PI;
+      for (let i=1; i<3; i++) {
+        this.prevAngles[this.joints[i]] = this.objects[this.joints[i]].rotation.y;
+        this.objects[this.joints[i]].rotation.y = this.SV(i)*Math.PI;
       }
-      
-      this.objects[this.joints[4]].rotation.x = (this.jointSliders[4].value/50-1)*Math.PI;
-      this.objects[this.joints[5]].rotation.z = (this.jointSliders[5].value/50-1)*Math.PI;
-      this.objects[15].position.y = 6 + (this.jointSliders[6].value/50-1)*6;
-      this.objects[12].position.y = -6 - (this.jointSliders[6].value/50-1)*6;
 
-      this.objects[20].position.y = -(this.jointSliders[7].value/50-1)*200;
-      //this.objects[this.obects[15]].translate.
+      const j1 = this.joints[1];
+      if (this.prevAngles[j1] != this.objects[j1].rotation.y) {
+        this.objects[this.joints[3]].rotation.y -= (this.objects[j1].rotation.y-this.prevAngles[j1]);
+      }
+
+      const j2 = this.joints[2];
+      if (this.prevAngles[j2] != this.objects[j2].rotation.y) {
+        this.objects[this.joints[3]].rotation.y -= (this.objects[j2].rotation.y-this.prevAngles[j2]);
+      }
+
+      const j3 = this.joints[3];
+      this.prevAngles[j3] = this.objects[j3].rotation.y;
+      const newAngle = this.SV(3)*Math.PI;
+      
+      this.objects[this.joints[4]].rotation.x = this.SV(4)*Math.PI;
+      this.objects[this.joints[5]].rotation.z = this.SV(5)*Math.PI;
+      this.objects[15].position.y = 6 + this.SV(6)*6;
+      this.objects[12].position.y = -6 - this.SV(6)*6;
+
+      this.objects[20].position.y = -this.SV(7)*200;
 
       this.renderer.render(this.scene, this.camera);
     }
