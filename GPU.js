@@ -77,12 +77,13 @@ class GPU {
   tinkerCadGroup;
   invObjNumMap = {};  //Tinkercad order to Correct order
 
-  //keepa bunch of Vector3 handy so we don't have to thrash memory
+  //keep a bunch of Vector3 handy so we don't have to thrash memory
   light2Pos = new THREE.Vector3();
   camX = new THREE.Vector3();
   camY = new THREE.Vector3();
   camZ = new THREE.Vector3();
   tempV = new THREE.Vector3();
+
 
   constructor(canvas) {
     this.canvas = canvas;
@@ -149,12 +150,12 @@ class GPU {
  
     this.controls = new OrbitControls(this.camera, renderer.domElement);
     this.controls.minDistance = 0.1;
-    this.controls.maxDistance = 1000;
+    this.controls.maxDistance = 500;
     this.controls.zoomSpeed = 1;
 
     //this.mainLight = new THREE.PointLight(0xffffff, 1.2);
     this.mainLight = new THREE.DirectionalLight(0xFFFFFF,.7);
-    this.mainLight.position.set(-100,-100,200);
+    this.mainLight.position.set(0,0,200); //(-100,-100,200);
 
     this.setShadow(this.mainLight);
     this.scene.add(this.mainLight);
@@ -163,12 +164,9 @@ class GPU {
     //the directional light softer
     this.light2 = new THREE.PointLight(0xffffff,.4);
 
-    //this.setShadow(this.light2);
+    this.setShadow(this.light2);
     this.camera.add(this.light2);
     this.scene.add(this.camera);
-
-    //this.scene.add(this.light2);
-    //this.camera.up.set(1,0,0);
 
     this.scene.add( new THREE.AmbientLight( 0xffff00, 0.3 ) );
 
@@ -186,9 +184,6 @@ class GPU {
       object.frustumCulled = false;
       if (object.hasOwnProperty("material")) {
         object.material.side = THREE.DoubleSide;
-
-        //object.geometry.center();
-
         this.baryCenters.push(
           this.computeBaryCenter(object.geometry.attributes.position)
         );
@@ -350,14 +345,18 @@ class GPU {
       const geometry = new THREE.BoxGeometry( 500, 500, 1 );
 
       const railHeight = 30;
-      const material = new THREE.MeshPhongMaterial( 
-        {color: "rgb(50,70,100)", side: THREE.DoubleSide, shininess: 5 } );
-      const plane = new THREE.Mesh( geometry, material );
+      this.planeMaterial = new THREE.MeshPhongMaterial( 
+        {color: "rgb(50,70,100)", side: THREE.DoubleSide, shininess: 5,
+          reflectivity: 1} );
+
+      this.plane = new THREE.Mesh( geometry, this.planeMaterial );
+      const plane = this.plane;
       plane.receiveShadow = true;
       plane.position.z = this.objects[20].position.z - railHeight;
       this.scene.add( plane );
       plane.name = "Object#100";
       plane.userData.id = 100;
+
 
       const railGeo = new THREE.BoxGeometry(11,500,6);
       const railMat = new THREE.MeshPhongMaterial( 
@@ -518,6 +517,8 @@ class GPU {
     this.sphere3 = new THREE.SphereGeometry(2.);
     this.bigSphere = new THREE.SphereGeometry(1.);
  
+    window.GPU = this;
+
   }
 
   setParents() {
@@ -790,7 +791,6 @@ class GPU {
       //set lights based on x,y,z axes of camera
       //this.camera.matrixWorld.extractBasis(this.camX,this.camY,this.camZ);
       //this.mainLight.position.copy(this.camZ.multiplyScalar(100));
-
       //this.light2Pos.copy(this.camY);
       //this.light2.position.copy(this.camY.multiplyScalar(1000));
 
@@ -891,8 +891,6 @@ class GPU {
       if ( !this.currentMousePoint ) {
         //if we get here we have to reset the color of the previous highlighted object
         if (this.currentHighLighted) {
-          //console.log("we need to revert");
-          //console.log(this.currentHighLighted.material.color);
           this.currentHighLighted.material.color.copy(this.previousColor);
           this.currentHighLighted.material.color.highlighted = false;
           this.currentHighLighted = null;
@@ -946,6 +944,8 @@ class GPU {
       this.objects[12].position.y = -6 - this.SV(6)*6;
 
       this.objects[20].position.y = -this.SV(7)*200;
+
+      this.controls.update();
 
       this.renderer.render(this.scene, this.camera);
     }
