@@ -33,12 +33,12 @@ const objNumMap = {
   12:24
 }
 
-//have to manuallu fudge the scene graph so we get rotations around the correct joints
 const parentsx = [-1,0,0,0,0,0,0,6,6,7,7,7,7,12,12,12,12,12,17,17,17,17,17,22,22];
 
+//have to manually fudge the scene graph so we get rotations around the correct joints
 const parents = [-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,22];
 
-  //indexed by obj id in correct order (as opposed to TinkerCad order)
+//armColors is indexed by obj id in correct order (as opposed to TinkerCad order)
 const grey = [.2,.1,.1];
 const armColors = {21:[.5,.5,1],22:grey,23:grey,24:grey};  //add colors here for different arm segments
 
@@ -67,7 +67,7 @@ class GPU {
   numLines = 0;
   showText = false;
   zoom = 1;
-  frustumFudge = 1; //1.2;
+  frustumFudge = 1;
   previousHighLighedIndex = -1;
   infoDiv;
   lineSegments=[];
@@ -551,8 +551,8 @@ class GPU {
     return new THREE.Vector3(bary[0], bary[1], bary[2]);
   }
 
-
   computeCompositeBaryCenterOld() {
+    //more convenient to use Vector3, see computeCompositeBaryCenter
     const dim = this.baryCenters[0].length;
     const bary = [0, 0, 0];
     for (const center of this.baryCenters) {
@@ -950,6 +950,7 @@ class GPU {
       this.renderer.render(this.scene, this.camera);
     }
   }
+
 }
 
 export default GPU
