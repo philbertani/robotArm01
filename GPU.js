@@ -43,6 +43,7 @@ const grey = [.2,.1,.1];
 const armColors = {21:[.5,.5,1],22:grey,23:grey,24:grey};  //add colors here for different arm segments
 
 class GPU {
+  cameraTypes = {Perspective:0,Orthographic:1}
   renderer;
   scene;
   camera;
@@ -54,7 +55,7 @@ class GPU {
   controls = {};
   showShadows = 0;
   pointList = [];
-  cameraType = 0; //0:perspective, 1:orthographic
+  cameraType = this.cameraTypes.Perspective;
   objNum = 0;
   baryCenters = [];
   objects = [];   //in TinkerCad order right now unfortunately
@@ -76,6 +77,7 @@ class GPU {
   tinkerCadGroup;
   invObjNumMap = {};  //Tinkercad order to Correct order
 
+  //keepa bunch of Vector3 handy so we don't have to thrash memory
   light2Pos = new THREE.Vector3();
   camX = new THREE.Vector3();
   camY = new THREE.Vector3();
@@ -117,18 +119,27 @@ class GPU {
     const frustumSize = 200 / this.frustumFudge;
     this.frustumSize = frustumSize;
 
-    /*
-    this.camera = new THREE.OrthographicCamera(
-      (-frustumSize * aspect) / 2,
-      (frustumSize * aspect)  / 2,
-      frustumSize / 2,
-      -frustumSize / 2,
-      1,
-      1000
-    );
-    */
-   
-    this.camera = new THREE.PerspectiveCamera(50,aspect,.1,2000);
+    switch (this.cameraType) {
+
+      case (this.cameraTypes.Orthographic):
+
+        this.camera = new THREE.OrthographicCamera(
+          (-frustumSize * aspect) / 2,
+          (frustumSize * aspect)  / 2,
+          frustumSize / 2,
+          -frustumSize / 2,
+          1,
+          1000
+        );
+        break;
+
+      case (this.cameraTypes.Perspective):
+        this.camera = new THREE.PerspectiveCamera(50,aspect,.1,2000);
+        break;
+
+      default:
+        throw new Error (this.cameraType);
+    }
 
     this.camera.position.y = -frustumSize ;
     this.camera.position.z = frustumSize ;
@@ -658,13 +669,13 @@ class GPU {
       }
     }
     else if (ev.keyCode === 122) {  //key z
-      this.handleResizeOrtho("handleZoom")
+      this.handleResizeOrtho("handleZoom");  //perspective cam type not handling zoom
       this.zoom ^= 1;
     }
   }
 
   handleResize() {
-    if (this.cameraType === 1) {
+    if (this.cameraType === this.cameraTypes.Orthographic) {
       this.handleResizeOrtho();
       return;
     }
@@ -894,7 +905,7 @@ class GPU {
         const textElem = this.labels[i];
         const text = "obj#" + i;
         const wpos = new THREE.Vector3();
-        obj.getWorldPosition(wpos);
+        obj.getWorldPosition(wpos);  //world position is now actually centered on the object and not 0,0,0
         //this.setTextOrtho(textElem, this.baryCenters[i], text);
         this.setTextOrtho(textElem, wpos, text);
       }
