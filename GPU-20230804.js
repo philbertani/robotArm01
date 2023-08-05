@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
-import { Reflector } from 'three/examples/jsm/objects/Reflector';
+
+
 
 //tinkercad puts objects in seemingly random order, this maps them 
 //from top to bottom in order of connection
@@ -106,7 +107,7 @@ class GPU {
 
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height, true);
-    renderer.setClearColor("rgb(200,200,200)", 1);
+    renderer.setClearColor("rgb(150,150,250)", 1);
 
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.needsUpdate = true;
@@ -346,27 +347,17 @@ class GPU {
       const geometry = new THREE.BoxGeometry( 500, 500, 1 );
 
       const railHeight = 30;
+      this.planeMaterial = new THREE.MeshPhongMaterial( 
+        {color: "rgb(50,70,100)", side: THREE.DoubleSide, shininess: 5,
+          reflectivity: 1} );
 
-      const mirror1 = new Reflector(
-        new THREE.BoxGeometry(500, 500, 1),
-        {
-            //color: new THREE.Color(0x7f7f7f),
-            //clipBias: 0.003,
-            color: "rgb(70,70,150)", side: THREE.DoubleSide,
-            receiveShadow: true,
-            textureWidth: window.innerWidth * window.devicePixelRatio,
-            textureHeight: window.innerHeight * window.devicePixelRatio
-        }
-      )
-      mirror1.position.z = this.objects[20].position.z - railHeight;
-      mirror1.name = "Object#102";
-      mirror1.userData.id = 102;
-
-      //this is a shader material which sends color via uniforms
-      //so create reference at material.color since we use that later in general
-      mirror1.material.color = mirror1.material.uniforms.color.value;
-
-      this.scene.add(mirror1);
+      this.plane = new THREE.Mesh( geometry, this.planeMaterial );
+      const plane = this.plane;
+      plane.receiveShadow = true;
+      plane.position.z = this.objects[20].position.z - railHeight;
+      //this.scene.add( plane );
+      plane.name = "Object#100";
+      plane.userData.id = 100;
 
       const railGeo = new THREE.BoxGeometry(11,500,6);
       const railMat = new THREE.MeshPhongMaterial( 
@@ -429,8 +420,8 @@ class GPU {
       support3.position.y = -210;
       this.scene.add(support3);
 
-      //const axesHelper = new THREE.AxesHelper( 200 );
-      //this.scene.add( axesHelper );
+      const axesHelper = new THREE.AxesHelper( 200 );
+      this.scene.add( axesHelper );
  
       this.prevAngles = Array(this.objects.length).fill(0);
 
@@ -843,17 +834,15 @@ class GPU {
             this.currentBiggerMouseSphere.visible = true;
             this.currentBiggerMouseSphere.position.copy(point.point);
 
-            const cc = pointToUse.object.material.color;// ?? pointToUse.object.material.uniforms.color.value;
+            const cc = pointToUse.object.material.color;
             let colorToUse = cc;
 
             function ET(cc) {  //(E)xponential (T)one map
               return 1 - Math.exp(-cc);
             }
 
-            if ( !pointToUse.object.material.color) {console.log(cc)};
-
-            if ( cc  && (!cc.hasOwnProperty("highlighted") ||
-                (cc.hasOwnProperty("highlighted") && !cc.highlighted ))) {
+            if ( !cc.hasOwnProperty("highlighted") ||
+                (cc.hasOwnProperty("highlighted") && !cc.highlighted )) {
 
               //if something is already highlighted we need to know it's index
               if ( this.currentHighLighted ) {
@@ -965,4 +954,4 @@ class GPU {
 
 }
 
-export default GPU
+//export default GPU
