@@ -434,6 +434,10 @@ class GPU {
  
       this.prevAngles = Array(this.objects.length).fill(0);
 
+      //assuming they start at zero which is not very general
+      //we need this to get changes in slider values
+      this.prevSliderValues = Array(this.objects.length).fill(0);
+
       function checkObjId(str) {
         if (str[0]==="o") {  //id starts with (o)bject
           return str.slice(6); //return 6 through end which will be the object #
@@ -941,15 +945,19 @@ class GPU {
         this.objects[this.joints[3]].rotation.y -= (this.objects[j1].rotation.y-this.prevAngles[j1]);
       }
 
+      //keep joint 3 at same angle relative to ground - we will need to do this for every joint at some point
       const j2 = this.joints[2];
-      if (this.prevAngles[j2] != this.objects[j2].rotation.y) {
-        this.objects[this.joints[3]].rotation.y -= (this.objects[j2].rotation.y-this.prevAngles[j2]);
-      }
-
       const j3 = this.joints[3];
+      if (this.prevAngles[j2] != this.objects[j2].rotation.y) {
+        this.objects[j3].rotation.y -= (this.objects[j2].rotation.y-this.prevAngles[j2]);
+      }
       this.prevAngles[j3] = this.objects[j3].rotation.y;
       const newAngle = this.SV(3)*Math.PI;
-      
+      const deltaAngle = newAngle - this.prevSliderValues[j3];
+      this.prevSliderValues[j3] = newAngle;
+      this.objects[j3].rotation.y += deltaAngle;
+
+
       this.objects[this.joints[4]].rotation.x = this.SV(4)*Math.PI;
       this.objects[this.joints[5]].rotation.z = this.SV(5)*Math.PI;
       this.objects[15].position.y = 6 + this.SV(6)*6;
