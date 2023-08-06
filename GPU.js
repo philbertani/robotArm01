@@ -68,6 +68,7 @@ class GPU {
   numLines = 0;
   showText = false;
   zoom = 1;
+  zoomed = 0;
   frustumFudge = 1;
   previousHighLighedIndex = -1;
   infoDiv;
@@ -684,14 +685,14 @@ class GPU {
       }
     }
     else if (ev.keyCode === 122) {  //key z
-      this.handleResizeOrtho("handleZoom");  //perspective cam type not handling zoom
+      this.handleResize("handleZoom");
       this.zoom ^= 1;
     }
   }
 
-  handleResize() {
+  handleResize(handleZoom="") {
     if (this.cameraType === this.cameraTypes.Orthographic) {
-      this.handleResizeOrtho();
+      this.handleResizeOrtho(handleZoom);
       return;
     }
 
@@ -700,10 +701,29 @@ class GPU {
     this.width = width;
     this.height = height;
 
+    //zooming for Perspective vs Orthographic is different so different code here
+    let zoomMult = 1;
+    if (handleZoom) {
+      zoomMult = (this.zoom === 0 ) ? 1 : 6;
+      console.log(zoomMult,this.currentMousePoint);
+      if ( zoomMult > 1 && this.currentMousePoint) {
+        this.camera.position.divideScalar(6);
+        this.controls.target.copy(this.currentMousePoint);
+        this.zoomed = 1;
+      }
+      else if (this.zoomed) {
+        this.camera.position.multiplyScalar(6)
+        this.controls.target.set(0,0,0);
+        this.zoomed = 0;
+      }
+    }
+
     //console.log(this)  don't forget to bind the GPU this context to callback functions
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
+
+    this.controls.update();
   }
 
   handleResizeOrtho(handleZoom="") {
@@ -715,9 +735,6 @@ class GPU {
     let zoomMult = 1;
     if (handleZoom) {
       zoomMult = (this.zoom === 0 ) ? 1 : 6;
-    }
-
-    if (handleZoom) {
       if ( zoomMult > 1 && this.currentMousePoint) {
         this.controls.target.copy(this.currentMousePoint);
       }
