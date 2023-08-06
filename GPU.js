@@ -85,6 +85,7 @@ class GPU {
   camY = new THREE.Vector3();
   camZ = new THREE.Vector3();
   tempV = new THREE.Vector3();
+  wpos = new THREE.Vector3();
 
 
   constructor(canvas) {
@@ -340,9 +341,13 @@ class GPU {
       this.currentBigMouseSphere.visible = false;
       this.currentBiggerMouseSphere = new THREE.Mesh(this.sphere3,this.pointMaterial2);
       this.currentBiggerMouseSphere.visible = false;
+      this.bullseye = new THREE.Mesh(this.bullseyeSphere,this.bullseyeMaterial);
+      this.bullseye2 = new THREE.Mesh(this.bullseyeSphere2,this.bullseyeMaterial2);
 
       this.scene.add(this.currentBigMouseSphere);
       this.scene.add(this.currentBiggerMouseSphere);
+      this.scene.add(this.bullseye);
+      this.scene.add(this.bullseye2);
    
       const geometry = new THREE.BoxGeometry( 500, 500, 1 );
 
@@ -359,6 +364,8 @@ class GPU {
             textureHeight: window.innerHeight * window.devicePixelRatio
         }
       )
+      this.groundPlane = mirror1;
+
       mirror1.position.z = this.objects[20].position.z - railHeight;
       mirror1.name = "Object#102";
       mirror1.userData.id = 102;
@@ -433,6 +440,11 @@ class GPU {
       //const axesHelper = new THREE.AxesHelper( 200 );
       //this.scene.add( axesHelper );
  
+      const grid = new THREE.GridHelper(500,50);
+      grid.rotation.x = Math.PI/2;
+      grid.position.z = rootPos.z - railHeight + .5;
+      this.scene.add(grid);
+
       this.prevAngles = Array(this.objects.length).fill(0);
 
       //assuming they start at zero which is not very general
@@ -521,6 +533,15 @@ class GPU {
       shininess: 20
     });
 
+    this.pointMaterial3 = new THREE.MeshPhongMaterial({
+      shininess: 0
+    });
+
+    this.bullseyeMaterial = this.pointMaterial2.clone();
+    this.bullseyeMaterial.color.setRGB(.9,.5,.2);
+    this.bullseyeMaterial2 = this.pointMaterial3.clone();
+    this.bullseyeMaterial2.color.setRGB(.8,.4,0);
+
     this.armMaterial = new THREE.MeshPhongMaterial({
       color: "rgb(200,100,0)",
       shininess: 60,
@@ -531,6 +552,8 @@ class GPU {
     this.sphere2 = new THREE.SphereGeometry(.8);
     this.sphere3 = new THREE.SphereGeometry(2.);
     this.bigSphere = new THREE.SphereGeometry(1.);
+    this.bullseyeSphere = new THREE.SphereGeometry(10);
+    this.bullseyeSphere2 = new THREE.SphereGeometry(2);
  
     window.GPU = this;
 
@@ -577,7 +600,7 @@ class GPU {
       }
     }
 
-    console.log("composite baryCenter");
+    //console.log("composite baryCenter");
     for (let j = 0; j < dim; j++) {
       bary[j] /= this.baryCenters.length;
     }
@@ -705,7 +728,7 @@ class GPU {
     let zoomMult = 1;
     if (handleZoom) {
       zoomMult = (this.zoom === 0 ) ? 1 : 6;
-      console.log(zoomMult,this.currentMousePoint);
+      //console.log(zoomMult,this.currentMousePoint);
       if ( zoomMult > 1 && this.currentMousePoint) {
         this.camera.position.divideScalar(6);
         this.controls.target.copy(this.currentMousePoint);
@@ -935,10 +958,10 @@ class GPU {
         const obj = this.objects[i];
         const textElem = this.labels[i];
         const text = "obj#" + i;
-        const wpos = new THREE.Vector3();
-        obj.getWorldPosition(wpos);  //world position is now actually centered on the object and not 0,0,0
+        
+        obj.getWorldPosition(this.wpos);  //world position is now actually centered on the object and not 0,0,0
         //this.setTextOrtho(textElem, this.baryCenters[i], text);
-        this.setTextOrtho(textElem, wpos, text);
+        this.setTextOrtho(textElem, this.wpos, text);
       }
 
       if (this.highlightLine) {
@@ -980,8 +1003,13 @@ class GPU {
       this.objects[15].position.y = 6 + this.SV(6)*6;
       this.objects[12].position.y = -6 - this.SV(6)*6;
 
-      this.objects[20].position.y = -this.SV(7)*200;
+      this.objects[20].position.y = -this.SV(7)*200;  //root position translation along rail
 
+      this.objects[17].getWorldPosition(this.wpos); 
+      this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #20
+      this.bullseye.position.z = this.groundPlane.position.z;
+      this.bullseye2.position.copy(this.bullseye.position);
+      
       this.controls.update();
 
       this.renderer.render(this.scene, this.camera);
