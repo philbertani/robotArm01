@@ -62,7 +62,7 @@ class GPU {
   objects = [];   //in TinkerCad order right now unfortunately
   labels = [];
   groupBaryCenter;
-  pointer = { x: 0, y: 0 };
+  pointer = { x: 0, y: 0 };  //raycast mouse pointer in NDC
   measurePoints = [];
   currentMousePoint = null;
   numLines = 0;
@@ -839,161 +839,134 @@ class GPU {
     return this.jointSliders[n].value/50-1;
   }
 
-  render() {
-    console.log("in render");
-    let prevRenderTime = Date.now();
-    const fps = 40;
-    const fpsInterval = 1000 / fps;
-    let frameCount = 0;
-    requestAnimationFrame(renderLoop.bind(this));
+  raycastFromCameraToMouse() {
 
-    function renderLoop(time) {
-      requestAnimationFrame(renderLoop.bind(this));
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const mousePicker = this.raycaster.intersectObjects(this.scene.children);
+    this.currentBigMouseSphere.visible = false;  
+    this.currentBiggerMouseSphere.visible = false;  
 
-      //throttle the fps because without it just maxes
-      //out the GPU for no good reason, for example it will
-      //redisplay the same scene at 240 fps on this computer
-      const currentRenderTime = Date.now();
-      const elapsed = currentRenderTime - prevRenderTime;
-      if (elapsed < fpsInterval) return;
-      prevRenderTime = currentRenderTime - (elapsed % fpsInterval);
-      time *= 0.001; //convert from milliseconds to seconds
-      frameCount++;
+    this.currentMousePoint = null;
 
-      //this is cool to know but we do not need it here
-      //set lights based on x,y,z axes of camera
-      //this.camera.matrixWorld.extractBasis(this.camX,this.camY,this.camZ);
-      //this.mainLight.position.copy(this.camZ.multiplyScalar(100));
-      //this.light2Pos.copy(this.camY);
-      //this.light2.position.copy(this.camY.multiplyScalar(1000));
+    if (mousePicker.length > 0 ) {
 
-      this.raycaster.setFromCamera(this.pointer, this.camera);
-      if (frameCount % 40 === 0) {
-        //console.log("origin:",this.raycaster.ray.origin)
-        //console.log("dir:", this.raycaster.ray.direction)
-      }
+      //console.log(mousePicker[0])
 
-      const mousePicker = this.raycaster.intersectObjects(this.scene.children);
+      let pointToUse = mousePicker[0];
+      for (const point of mousePicker) {
 
-      this.currentBigMouseSphere.visible = false;  
-      this.currentBiggerMouseSphere.visible = false;  
-
-      this.currentMousePoint = null;
-
-      if (mousePicker.length > 0 ) {
-        //console.log(mousePicker[0])
-
-        let pointToUse = mousePicker[0];
-        for (const point of mousePicker) {
-
-          if (point.object.edgeLength) {
-            this.lineObjectElem.innerHTML = "";
-            this.lineObjectElem.innerHTML = "<p>" +
-              "<br>Line # and Length is: " + point.object.index + ", " + Math.trunc(point.object.edgeLength*1000)/1000;
-              + "/p>"
-          }
-
-          //only pick the coordinates of actual points in the original objects or else
-          //we wind up making new vertices on the line segments
-          if ( String(point.object.name).includes("Object") ) {
-
-            this.mouseObjectElem.innerHTML = "";
-            pointToUse = point;
-
-            this.currentBigMouseSphere.visible = true;
-            this.currentBigMouseSphere.position.copy(point.point);
-
-            this.currentBiggerMouseSphere.visible = true;
-            this.currentBiggerMouseSphere.position.copy(point.point);
-
-            const cc = pointToUse.object.material.color;// ?? pointToUse.object.material.uniforms.color.value;
-            let colorToUse = cc;
-
-            function ET(cc) {  //(E)xponential (T)one map
-              return 1 - Math.exp(-cc);
-            }
-
-            if ( !pointToUse.object.material.color) {console.log(cc)};
-
-            if ( 
-                  (cc  && (!cc.hasOwnProperty("highlighted") ||
-                  (cc.hasOwnProperty("highlighted") && !cc.highlighted )))) {
-
-              //if something is already highlighted we need to know it's index
-              if ( this.currentHighLighted ) {
-                this.previousHighLighedIndex = this.currentHighLighted.index;
-                this.currentHighLighted.material.color.copy(this.previousColor);
-                this.currentHighLighted.material.color.highlighted = false;
-              }
-
-              const sc = 4;
-              this.previousColor = new THREE.Color().copy(cc);
-              const highlightColor = new THREE.Color(ET(cc.r*sc),ET(cc.g*sc),ET(cc.b*sc));
-
-              const isGroundPlane = point.object.name == "Object#102";
-              //don't highlight the ground plane - too annoying
-              if (!isGroundPlane) cc.set(highlightColor);
-              cc.highlighted = true;
-              this.currentHighLighted = pointToUse.object;
-              colorToUse = highlightColor;
-            }
-  
-            //const newColor = new THREE.Color(1-cc.r,1-cc.g,1-cc.b);
-            const newColor = new THREE.Color(1-colorToUse.r,1-colorToUse.g,1-colorToUse.b);
-            this.currentBiggerMouseSphere.material.color.set(newColor);
-
-            function rr(cc) {
-              return Math.trunc(cc*1000)/1000;
-            }
-            this.mouseObjectElem.innerHTML +=
-            "<p>" +
-            pointToUse.object.name +
-            "<br><br>Point<br>" +
-            JSON.stringify(pointToUse.point) +
-            "<br><br>Face<br>" +
-            JSON.stringify(pointToUse.face) +
-            "<br><br>Color<br>" +
-            " red: "   + rr(this.previousColor.r) +
-            " green: " + rr(this.previousColor.g) +
-            " blue: "  + rr(this.previousColor.b)
-            "</p>";
-            break;
-          }
-        }        
-
-        //check if new point is very close to one that exists
-        //if it is use the exact position for that point
-        this.currentMousePoint = pointToUse.point;
- 
-      }
-
-      if ( !this.currentMousePoint ) {
-        //if we get here we have to reset the color of the previous highlighted object
-        if (this.currentHighLighted) {
-          this.currentHighLighted.material.color.copy(this.previousColor);
-          this.currentHighLighted.material.color.highlighted = false;
-          this.currentHighLighted = null;
+        if (point.object.edgeLength) {
+          this.lineObjectElem.innerHTML = "";
+          this.lineObjectElem.innerHTML = "<p>" +
+            "<br>Line # and Length is: " + point.object.index + ", " + Math.trunc(point.object.edgeLength*1000)/1000;
+            + "/p>"
         }
-      }
 
-      if (this.highlightObject) {
-        const i = this.highlightObject;
-        const obj = this.objects[i];
-        const textElem = this.labels[i];
-        const text = "obj#" + i;
-        
-        obj.getWorldPosition(this.wpos);  //world position is now actually centered on the object and not 0,0,0
-        //this.setTextOrtho(textElem, this.baryCenters[i], text);
-        this.setTextOrtho(textElem, this.wpos, text);
-      }
+        //only pick the coordinates of actual points in the original objects or else
+        //we wind up making new vertices on the line segments
+        if ( String(point.object.name).includes("Object") ) {
 
-      if (this.highlightLine) {
-        const textElem = this.lineLabels[this.highlightLine];
-        const obj = this.lineSegments[this.highlightLine];
-        const text = "line#" + this.highlightLine;
-        this.setTextOrtho(textElem, obj.position, text);
+          this.mouseObjectElem.innerHTML = "";
+          pointToUse = point;
+
+          this.currentBigMouseSphere.visible = true;
+          this.currentBigMouseSphere.position.copy(point.point);
+
+          this.currentBiggerMouseSphere.visible = true;
+          this.currentBiggerMouseSphere.position.copy(point.point);
+
+          //nb: .color may have been redirected to point to: object.material.uniforms.color.value
+          const cc = pointToUse.object.material.color;
+          let colorToUse = cc;
+
+          function ET(cc) {  //(E)xponential (T)one map
+            return 1 - Math.exp(-cc);
+          }
+
+          if ( !pointToUse.object.material.color) {console.log(cc)};
+
+          if ( 
+                (cc  && (!cc.hasOwnProperty("highlighted") ||
+                (cc.hasOwnProperty("highlighted") && !cc.highlighted )))) {
+
+            //if something is already highlighted we need to know it's index
+            if ( this.currentHighLighted ) {
+              this.previousHighLighedIndex = this.currentHighLighted.index;
+              this.currentHighLighted.material.color.copy(this.previousColor);
+              this.currentHighLighted.material.color.highlighted = false;
+            }
+
+            const sc = 4;
+            this.previousColor = new THREE.Color().copy(cc);
+            const highlightColor = new THREE.Color(ET(cc.r*sc),ET(cc.g*sc),ET(cc.b*sc));
+
+            const isGroundPlane = point.object.name == "Object#102";
+            //don't highlight the ground plane - too annoying
+            if (!isGroundPlane) cc.set(highlightColor);
+            cc.highlighted = true;
+            this.currentHighLighted = pointToUse.object;
+            colorToUse = highlightColor;
+          }
+
+          //this is static move out of loop and do only once
+          const newColor = new THREE.Color(1-colorToUse.r,1-colorToUse.g,1-colorToUse.b);
+          this.currentBiggerMouseSphere.material.color.set(newColor);
+
+          function rr(cc) {
+            return Math.trunc(cc*1000)/1000;
+          }
+          this.mouseObjectElem.innerHTML +=
+          "<p>" +
+          pointToUse.object.name +
+          "<br><br>Point<br>" +
+          JSON.stringify(pointToUse.point) +
+          "<br><br>Face<br>" +
+          JSON.stringify(pointToUse.face) +
+          "<br><br>Color<br>" +
+          " red: "   + rr(this.previousColor.r) +
+          " green: " + rr(this.previousColor.g) +
+          " blue: "  + rr(this.previousColor.b)
+          "</p>";
+          break;
+        }
+      }        
+
+      //check if new point is very close to one that exists
+      //if it is use the exact position for that point
+      this.currentMousePoint = pointToUse.point;
+
+    }
+
+    if ( !this.currentMousePoint ) {
+      //if we get here we have to reset the color of the previous highlighted object
+      if (this.currentHighLighted) {
+        this.currentHighLighted.material.color.copy(this.previousColor);
+        this.currentHighLighted.material.color.highlighted = false;
+        this.currentHighLighted = null;
       }
+    }
+
+    if (this.highlightObject) {
+      const i = this.highlightObject;
+      const obj = this.objects[i];
+      const textElem = this.labels[i];
+      const text = "obj#" + i;
       
+      obj.getWorldPosition(this.wpos);  //world position is now actually centered on the object and not 0,0,0
+      //this.setTextOrtho(textElem, this.baryCenters[i], text);
+      this.setTextOrtho(textElem, this.wpos, text);
+    }
+
+    if (this.highlightLine) {
+      const textElem = this.lineLabels[this.highlightLine];
+      const obj = this.lineSegments[this.highlightLine];
+      const text = "line#" + this.highlightLine;
+      this.setTextOrtho(textElem, obj.position, text);
+    }
+
+  }
+
+  animateArm(time) {
       //this.SV is the function to retrieve (S)lider (V)alues
       const baseJoint = this.joints[0]; //object #20
       this.objects[baseJoint].setRotationFromAxisAngle(this.fortyfiveXZ,this.SV(0)*Math.PI);
@@ -1020,7 +993,6 @@ class GPU {
       this.prevSliderValues[j3] = newAngle;
       this.objects[j3].rotation.y += deltaAngle;
 
-
       this.objects[this.joints[4]].rotation.x = this.SV(4)*Math.PI;
       this.objects[this.joints[5]].rotation.z = this.SV(5)*Math.PI;
       this.objects[15].position.y = 6 + this.SV(6)*6;
@@ -1032,6 +1004,36 @@ class GPU {
       this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #20
       this.bullseye.position.z = this.groundPlane.position.z;
       this.bullseye2.position.copy(this.bullseye.position);
+
+  }
+
+  render() {
+
+    //do some FPS book keeping
+    console.log("in render");
+    let prevRenderTime = Date.now();
+    const fps = 80;
+    const fpsInterval = 1000 / fps;
+    let frameCount = 0;
+    requestAnimationFrame(renderLoop.bind(this));
+
+    function renderLoop(time) {
+
+      requestAnimationFrame(renderLoop.bind(this));
+
+      //throttle the fps because without it just maxes
+      //out the GPU for no good reason, for example it will
+      //redisplay the same scene at 240 fps on this computer
+      const currentRenderTime = Date.now();
+      const elapsed = currentRenderTime - prevRenderTime;
+      if (elapsed < fpsInterval) return;
+      prevRenderTime = currentRenderTime - (elapsed % fpsInterval);
+      time *= 0.001; //convert from milliseconds to seconds
+      frameCount++;
+
+      this.raycastFromCameraToMouse();
+      
+      this.animateArm(time);
       
       this.controls.update();
 
