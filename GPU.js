@@ -4,8 +4,9 @@ import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
 import { Reflector } from 'three/examples/jsm/objects/Reflector';
 
-//tinkercad puts objects in seemingly random order, this maps them 
-//from top to bottom in order of connection
+// start of arm model stuff - put into its own module at some point
+// tinkercad puts objects in seemingly random order, this maps them 
+// from top to bottom in order of connection
 const objNumMap = {
   20:0,
   19:1,
@@ -42,6 +43,8 @@ const parents = [-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,2
 //armColors is indexed by obj id in correct order (as opposed to TinkerCad order)
 const grey = [.5,.2,1];
 const armColors = {21:[.5,.5,1],22:[.6,.3,0],23:grey,24:grey};  //add colors here for different arm segments
+
+// end of arm model stuff
 
 class GPU {
   cameraTypes = {Perspective:0,Orthographic:1}
@@ -89,99 +92,14 @@ class GPU {
 
 
   constructor(canvas) {
-    this.canvas = canvas;
-    window.addEventListener("resize", this.handleResize.bind(this), false);
-    window.addEventListener("keypress", this.handleKeyPress.bind(this), false);
-    this.infoDiv = document.getElementById("infoDiv");
 
-    THREE.Cache.clear();
-
-    const canvasDim = canvas.getBoundingClientRect();
-    const [width, height] = [canvasDim.width, canvasDim.height];
-    this.width = width;
-    this.height = height;
-
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true});
-    const renderer = this.renderer;
-
-    this.raycaster = new THREE.Raycaster();
-
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(width, height, true);
-    renderer.setClearColor("rgb(200,200,200)", 1);
-
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.needsUpdate = true;
-    renderer.shadowMap.type = THREE.VSMShadowMap; //PCFSoftShadowMap;
-    //VSMShadowMap got rid of all the striping problems ?!@#$#
-
-    canvas.appendChild(renderer.domElement);
-    this.canvas = canvas;
-    this.scene = new THREE.Scene();
-
-    const aspect = width / height;
-    const frustumSize = 200 / this.frustumFudge;
-    this.frustumSize = frustumSize;
-
-    switch (this.cameraType) {
-
-      case (this.cameraTypes.Orthographic):
-
-        this.camera = new THREE.OrthographicCamera(
-          (-frustumSize * aspect) / 2,
-          (frustumSize * aspect)  / 2,
-          frustumSize / 2,
-          -frustumSize / 2,
-          1,
-          1000
-        );
-        break;
-
-      case (this.cameraTypes.Perspective):
-        this.camera = new THREE.PerspectiveCamera(50,aspect,.1,2000);
-        break;
-
-      default:
-        throw new Error (this.cameraType);
-    }
-
-    this.camera.position.y = -frustumSize ;
-    this.camera.position.z = frustumSize ;
-
-    this.camera.up.set(0, 0, 1);  //camera "up" is originally y-axis
-    //orbitControls want to rotate around x and y axes, we want x and z
- 
-    this.controls = new OrbitControls(this.camera, renderer.domElement);
-    this.controls.minDistance = 0.1;
-    this.controls.maxDistance = 500;
-    this.controls.zoomSpeed = 1;
-
-    //this.mainLight = new THREE.PointLight(0xffffff, 1.2);
-    this.mainLight = new THREE.DirectionalLight(0xFFFFFF,.7);
-    this.mainLight.position.set(0,0,200); //(-100,-100,200);
-
-    this.setShadow(this.mainLight);
-    this.scene.add(this.mainLight);
-
-    //adding a light that casts no shadows makes 
-    //the directional light softer
-    this.light2 = new THREE.PointLight(0xffffff,.4);
-
-    this.setShadow(this.light2);
-    this.camera.add(this.light2);
-    this.scene.add(this.camera);
-
-    this.scene.add( new THREE.AmbientLight( 0xffff00, 0.3 ) );
-
+    // local constructor functions ************************************
     const onProgress = function (xhr) {
       if (xhr.lengthComputable) {
         const percentComplete = (xhr.loaded / xhr.total) * 100;
         console.log(Math.round(percentComplete, 2) + "% downloaded");
       }
     };
-
-    this.mtlL = new MTLLoader();
-    this.objL = new OBJLoader();
 
     function computeBaryCenters(object) {
       object.frustumCulled = false;
@@ -434,7 +352,6 @@ class GPU {
       endRail4.userData.id=109;
       this.scene.add(endRail4);
 
-
       const supportGeo = new THREE.CylinderGeometry( 6, 6, 24, 32 );
       const supportMat = new THREE.MeshPhongMaterial( 
         {color: "rgb(130,70,0)", side: THREE.DoubleSide, shininess: 5 } );
@@ -502,7 +419,7 @@ class GPU {
       this.infoDiv.addEventListener("mouseover",highlightObject.bind(this));
       this.infoDiv.addEventListener("mouseleave",unhighlightObject.bind(this));
   
-      this.renderer.render(this.scene, this.camera);
+      //finally kick off the render loop - START of ANIMATION and INTERACTION
       this.render();
     }
 
@@ -522,11 +439,97 @@ class GPU {
       this.pointer.y = -((ev.clientY - rect.top) / this.height) * 2 + 1;
     }
 
+    //end of local functions *********************************************
+
+    this.canvas = canvas;
+    window.addEventListener("resize", this.handleResize.bind(this), false);
+    window.addEventListener("keypress", this.handleKeyPress.bind(this), false);
+    this.infoDiv = document.getElementById("infoDiv");
+
+    THREE.Cache.clear();
+
+    const canvasDim = canvas.getBoundingClientRect();
+    const [width, height] = [canvasDim.width, canvasDim.height];
+    this.width = width;
+    this.height = height;
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true});
+    const renderer = this.renderer;
+
+    this.raycaster = new THREE.Raycaster();
+
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(width, height, true);
+    renderer.setClearColor("rgb(200,200,200)", 1);
+
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.needsUpdate = true;
+    renderer.shadowMap.type = THREE.VSMShadowMap; //PCFSoftShadowMap;
+    //VSMShadowMap got rid of all the striping problems ?!@#$#
+
+    canvas.appendChild(renderer.domElement);
+    this.canvas = canvas;
+    this.scene = new THREE.Scene();
+
+    const aspect = width / height;
+    const frustumSize = 200 / this.frustumFudge;
+    this.frustumSize = frustumSize;
+
+    switch (this.cameraType) {
+
+      case (this.cameraTypes.Orthographic):
+
+        this.camera = new THREE.OrthographicCamera(
+          (-frustumSize * aspect) / 2,
+          (frustumSize * aspect)  / 2,
+          frustumSize / 2,
+          -frustumSize / 2,
+          1,
+          1000
+        );
+        break;
+
+      case (this.cameraTypes.Perspective):
+        this.camera = new THREE.PerspectiveCamera(50,aspect,.1,2000);
+        break;
+
+      default:
+        throw new Error (this.cameraType);
+    }
+
+    this.camera.position.y = -frustumSize ;
+    this.camera.position.z = frustumSize ;
+
+    this.camera.up.set(0, 0, 1);  //camera "up" is originally y-axis
+    //orbitControls want to rotate around x and y axes, we want x and z
+ 
+    this.controls = new OrbitControls(this.camera, renderer.domElement);
+    this.controls.minDistance = 0.1;
+    this.controls.maxDistance = 500;
+    this.controls.zoomSpeed = 1;
+
+    //this.mainLight = new THREE.PointLight(0xffffff, 1.2);
+    this.mainLight = new THREE.DirectionalLight(0xFFFFFF,.7);
+    this.mainLight.position.set(0,0,200); //(-100,-100,200);
+
+    this.setShadow(this.mainLight);
+    this.scene.add(this.mainLight);
+
+    //adding a light that casts no shadows makes 
+    //the directional light softer
+    this.light2 = new THREE.PointLight(0xffffff,.4);
+
+    this.setShadow(this.light2);
+    this.camera.add(this.light2);
+    this.scene.add(this.camera);
+
+    this.scene.add( new THREE.AmbientLight( 0xffff00, 0.3 ) );
+
     this.canvas.addEventListener("mousemove", checkMouse.bind(this), false);
     this.mouseObjectElem = document.getElementById("mouseObject");
     this.lineObjectElem = document.getElementById("lineObject");
 
-    this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
+    //this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
 
     this.lineMaterial = new THREE.MeshPhongMaterial({
       color: "rgb(25,200,25)",
@@ -576,7 +579,14 @@ class GPU {
  
     window.GPU = this;
 
+    this.mtlL = new MTLLoader();
+    this.objL = new OBJLoader();
+    //loadMaterials calls loadObjects as callback which finally kicks off renderLoop
+    this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
+
   }
+
+  //start of class methods ****************************
 
   setParents() {
 
