@@ -273,6 +273,7 @@ class GPU {
       
       //object.geometry.center();  //doing this messes up the alignment
       
+      //final tinkering goes here as well so we don't need to loop again through tinkercad
       p.needsUpdate = true;
 
       //override the materials from TinkerCad
@@ -337,6 +338,9 @@ class GPU {
 
       this.fortyfiveXZ = new THREE.Vector3(-.9,0,1).normalize();
 
+      this.rootPos = this.objects[20].position;  //parent - all objects are children of children of this
+      const rootPos = this.rootPos;
+
       this.currentBigMouseSphere = new THREE.Mesh(this.bigSphere,this.selectPointMaterial);
       this.currentBigMouseSphere.visible = false;
       this.currentBiggerMouseSphere = new THREE.Mesh(this.sphere3,this.pointMaterial2);
@@ -366,7 +370,7 @@ class GPU {
       )
       this.groundPlane = mirror1;
 
-      mirror1.position.z = this.objects[20].position.z - railHeight;
+      mirror1.position.z = rootPos.z - railHeight;
       mirror1.name = "Object#102";
       mirror1.userData.id = 102;
 
@@ -381,8 +385,8 @@ class GPU {
         {color: "rgb(30,70,150)", side: THREE.DoubleSide, shininess: 50 } );
       const rail = new THREE.Mesh(railGeo, railMat);
       rail.receiveShadow = true;
-      rail.position.z = this.objects[20].position.z - 4;
-      rail.position.x = this.objects[20].position.x;
+      rail.position.z = rootPos.z - 4;
+      rail.position.x = rootPos.x;
       rail.name = "Object#103";
       rail.userData.id = 103;
       this.scene.add( rail );
@@ -390,14 +394,14 @@ class GPU {
       const railGeo2 = new THREE.BoxGeometry(2,500,6);
       const rail2 = new THREE.Mesh(railGeo2, railMat);
       rail2.receiveShadow = true;
-      rail2.position.z = this.objects[20].position.z + 3;
-      rail2.position.x = this.objects[20].position.x - 9;
+      rail2.position.z = rootPos.z + 3;
+      rail2.position.x = rootPos.x - 9;
       rail2.name = "Object#104";
       rail2.userData.id=104;
       this.scene.add(rail2);
 
       const rail3 = rail2.clone();
-      rail3.position.x = this.objects[20].position.x + 9;
+      rail3.position.x = rootPos.x + 9;
       rail3.name = "Object#105";
       rail3.userData.id=105;
       this.scene.add(rail3);
@@ -406,8 +410,8 @@ class GPU {
       const endRail = new THREE.Mesh(endGeo, railMat);
       endRail.receiveShadow = true;
       endRail.position.y = 248;
-      endRail.position.z = this.objects[20].position.z + 4;
-      endRail.position.x = this.objects[20].position.x;
+      endRail.position.z = rootPos.z + 4;
+      endRail.position.x = rootPos.x;
       endRail.name = "Object#106";
       endRail.userData.id=106;
       this.scene.add(endRail);
@@ -430,7 +434,7 @@ class GPU {
       endRail4.userData.id=109;
       this.scene.add(endRail4);
 
-      const rootPos = this.objects[20].position;
+
       const supportGeo = new THREE.CylinderGeometry( 6, 6, 24, 32 );
       const supportMat = new THREE.MeshPhongMaterial( 
         {color: "rgb(130,70,0)", side: THREE.DoubleSide, shininess: 5 } );
@@ -1022,7 +1026,7 @@ class GPU {
       this.objects[15].position.y = 6 + this.SV(6)*6;
       this.objects[12].position.y = -6 - this.SV(6)*6;
 
-      this.objects[20].position.y = -this.SV(7)*200;  //root position translation along rail
+      this.rootPos.y = -this.SV(7)*200;  //root position translation along rail
 
       this.objects[17].getWorldPosition(this.wpos); 
       this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #20
