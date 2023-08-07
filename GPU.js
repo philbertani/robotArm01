@@ -40,8 +40,8 @@ const parentsx = [-1,0,0,0,0,0,0,6,6,7,7,7,7,12,12,12,12,12,17,17,17,17,17,22,22
 const parents = [-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,22];
 
 //armColors is indexed by obj id in correct order (as opposed to TinkerCad order)
-const grey = [.2,.1,.1];
-const armColors = {21:[.5,.5,1],22:grey,23:grey,24:grey};  //add colors here for different arm segments
+const grey = [.5,.2,1];
+const armColors = {21:[.5,.5,1],22:[.6,.3,0],23:grey,24:grey};  //add colors here for different arm segments
 
 class GPU {
   cameraTypes = {Perspective:0,Orthographic:1}
@@ -383,8 +383,8 @@ class GPU {
       rail.receiveShadow = true;
       rail.position.z = this.objects[20].position.z - 4;
       rail.position.x = this.objects[20].position.x;
-      rail.name = "Object#101";
-      rail.userData.id = 101;
+      rail.name = "Object#103";
+      rail.userData.id = 103;
       this.scene.add( rail );
 
       const railGeo2 = new THREE.BoxGeometry(2,500,6);
@@ -392,10 +392,14 @@ class GPU {
       rail2.receiveShadow = true;
       rail2.position.z = this.objects[20].position.z + 3;
       rail2.position.x = this.objects[20].position.x - 9;
+      rail2.name = "Object#104";
+      rail2.userData.id=104;
       this.scene.add(rail2);
 
       const rail3 = rail2.clone();
       rail3.position.x = this.objects[20].position.x + 9;
+      rail3.name = "Object#105";
+      rail3.userData.id=105;
       this.scene.add(rail3);
 
       const endGeo = new THREE.BoxGeometry(16,4,10);
@@ -404,18 +408,26 @@ class GPU {
       endRail.position.y = 248;
       endRail.position.z = this.objects[20].position.z + 4;
       endRail.position.x = this.objects[20].position.x;
+      endRail.name = "Object#106";
+      endRail.userData.id=106;
       this.scene.add(endRail);
 
       const endRail2 = endRail.clone();
       endRail2.position.y = 210;
+      endRail2.name = "Object#107";
+      endRail2.userData.id=107;
       this.scene.add(endRail2);
 
       const endRail3 = endRail.clone();
       endRail3.position.y = -248;
+      endRail3.name = "Object#108";
+      endRail3.userData.id = 108
       this.scene.add(endRail3);
 
       const endRail4 = endRail.clone();
       endRail4.position.y = -210;
+      endRail4.name = "Object#109";
+      endRail4.userData.id=109;
       this.scene.add(endRail4);
 
       const rootPos = this.objects[20].position;
@@ -534,13 +546,16 @@ class GPU {
     });
 
     this.pointMaterial3 = new THREE.MeshPhongMaterial({
+      opacity: .99,
+      //transparent: true,
+      //blending: THREE.SubtractiveBlending,
       shininess: 0
     });
 
     this.bullseyeMaterial = this.pointMaterial2.clone();
-    this.bullseyeMaterial.color.setRGB(.9,.5,.2);
+    this.bullseyeMaterial.color.setRGB(.6,1,.2);
     this.bullseyeMaterial2 = this.pointMaterial3.clone();
-    this.bullseyeMaterial2.color.setRGB(.8,.4,0);
+    this.bullseyeMaterial2.color.setRGB(0,0,0);
 
     this.armMaterial = new THREE.MeshPhongMaterial({
       color: "rgb(200,100,0)",
@@ -553,7 +568,7 @@ class GPU {
     this.sphere3 = new THREE.SphereGeometry(2.);
     this.bigSphere = new THREE.SphereGeometry(1.);
     this.bullseyeSphere = new THREE.SphereGeometry(10);
-    this.bullseyeSphere2 = new THREE.SphereGeometry(2);
+    this.bullseyeSphere2 = new THREE.SphereGeometry(1);
  
     window.GPU = this;
 
@@ -876,7 +891,7 @@ class GPU {
 
           //only pick the coordinates of actual points in the original objects or else
           //we wind up making new vertices on the line segments
-          if ( String(point.object.name).includes("Object")) {
+          if ( String(point.object.name).includes("Object") ) {
 
             this.mouseObjectElem.innerHTML = "";
             pointToUse = point;
@@ -896,8 +911,9 @@ class GPU {
 
             if ( !pointToUse.object.material.color) {console.log(cc)};
 
-            if ( cc  && (!cc.hasOwnProperty("highlighted") ||
-                (cc.hasOwnProperty("highlighted") && !cc.highlighted ))) {
+            if ( 
+                  (cc  && (!cc.hasOwnProperty("highlighted") ||
+                  (cc.hasOwnProperty("highlighted") && !cc.highlighted )))) {
 
               //if something is already highlighted we need to know it's index
               if ( this.currentHighLighted ) {
@@ -909,12 +925,15 @@ class GPU {
               const sc = 4;
               this.previousColor = new THREE.Color().copy(cc);
               const highlightColor = new THREE.Color(ET(cc.r*sc),ET(cc.g*sc),ET(cc.b*sc));
-              cc.set(highlightColor);
+
+              const isGroundPlane = point.object.name == "Object#102";
+              //don't highlight the ground plane - too annoying
+              if (!isGroundPlane) cc.set(highlightColor);
               cc.highlighted = true;
               this.currentHighLighted = pointToUse.object;
               colorToUse = highlightColor;
             }
-
+  
             //const newColor = new THREE.Color(1-cc.r,1-cc.g,1-cc.b);
             const newColor = new THREE.Color(1-colorToUse.r,1-colorToUse.g,1-colorToUse.b);
             this.currentBiggerMouseSphere.material.color.set(newColor);
