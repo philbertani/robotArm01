@@ -291,7 +291,7 @@ class GPU {
 
     // ******************** Main Entry Point ******************************
     function loadObjects(object) {
-      //this is the main entry point for the rendering
+      //this is the main entry point for the rendering - it is the callback from obj.load
 
       //this is actually all objects from tinkercad file
       console.log(object);
