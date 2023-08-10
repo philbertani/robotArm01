@@ -49,6 +49,7 @@ const armColors = {21:[.5,.5,1],22:[.6,.3,0],23:grey,24:grey};  //add colors her
 class GPU {
   cameraTypes = {Perspective:0,Orthographic:1}
   renderer;
+  renderer2;
   scene;
   camera;
   controls;
@@ -91,6 +92,7 @@ class GPU {
   camZ = new THREE.Vector3();
   tempV = new THREE.Vector3();
   wpos = new THREE.Vector3();
+  quat = new THREE.Quaternion();
 
 
   constructor(canvas) {
@@ -221,7 +223,6 @@ class GPU {
       this.tinkerCadGroup = object;
 
       //very nice function with callback to get whole scene graph
-      //this.scene.traverse(computeBaryCenters.bind(this));
       this.tinkerCadGroup.traverse(computeBaryCenters.bind(this));
 
       //we now have the centers of all individual objects
@@ -229,7 +230,6 @@ class GPU {
       this.groupBaryCenter = this.computeCompositeBaryCenter();
       console.log("group center",this.groupBaryCenter);
 
-      //this.scene.traverse(centerGroup.bind(this));
       this.tinkerCadGroup.traverse(centerGroup.bind(this));
 
       this.infoDiv.innerHTML += "<hr>";
@@ -280,8 +280,7 @@ class GPU {
       const mirror1 = new Reflector(
         new THREE.BoxGeometry(500, 500, 1),
         {
-            //color: new THREE.Color(0x7f7f7f),
-            //clipBias: 0.003,
+            //clipBias: 0.003,  //what does this do?
             color: "rgb(70,70,150)", side: THREE.DoubleSide,
             receiveShadow: true,
             textureWidth: window.innerWidth * window.devicePixelRatio,
@@ -444,6 +443,8 @@ class GPU {
     //end of local functions *********************************************
 
     this.canvas = canvas;
+    this.canvas2 = canvas2;
+
     window.addEventListener("resize", this.handleResize.bind(this), false);
     window.addEventListener("keypress", this.handleKeyPress.bind(this), false);
     this.infoDiv = document.getElementById("infoDiv");
@@ -451,26 +452,37 @@ class GPU {
     THREE.Cache.clear();
 
     const canvasDim = canvas.getBoundingClientRect();
-    const [width, height] = [canvasDim.width, canvasDim.height];
+    const {width, height} = canvasDim;
     this.width = width;
     this.height = height;
 
+    const canvas2Dim = canvas2.getBoundingClientRect();
+    const {width:width2, height:height2} = canvas2Dim;
+
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true});
+    this.renderer2 = new THREE.WebGLRenderer({ antialias: true, alpha: true});
+
     const renderer = this.renderer;
 
     this.raycaster = new THREE.Raycaster();
 
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(width, height, true);
-    renderer.setClearColor("rgb(200,200,200)", 1);
+    function setRendererOptions(renderer,width,height) {
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(width, height, true);
+      renderer.setClearColor("rgb(200,200,200)", 1);
+  
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.needsUpdate = true;
+      renderer.shadowMap.type = THREE.VSMShadowMap; //PCFSoftShadowMap;
+      //VSMShadowMap got rid of all the striping problems ?!@#$#
+    }
 
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.needsUpdate = true;
-    renderer.shadowMap.type = THREE.VSMShadowMap; //PCFSoftShadowMap;
-    //VSMShadowMap got rid of all the striping problems ?!@#$#
+    setRendererOptions(renderer,width,height);
+    setRendererOptions(this.renderer2,width2,height2);
 
     canvas.appendChild(renderer.domElement);
-    this.canvas = canvas;
+    this.canvas2.appendChild(this.renderer2.domElement);
+
     this.scene = new THREE.Scene();
 
     const aspect = width / height;
@@ -510,6 +522,8 @@ class GPU {
     this.controls.maxDistance = 500;
     this.controls.zoomSpeed = 1;
 
+
+
     //this.mainLight = new THREE.PointLight(0xffffff, 1.2);
     this.mainLight = new THREE.DirectionalLight(0xFFFFFF,.7);
     this.mainLight.position.set(0,0,200); //(-100,-100,200);
@@ -530,8 +544,6 @@ class GPU {
     this.canvas.addEventListener("mousemove", checkMouse.bind(this), false);
     this.mouseObjectElem = document.getElementById("mouseObject");
     this.lineObjectElem = document.getElementById("lineObject");
-
-    //this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
 
     this.lineMaterial = new THREE.MeshPhongMaterial({
       color: "rgb(25,200,25)",
@@ -556,8 +568,6 @@ class GPU {
 
     this.pointMaterial3 = new THREE.MeshPhongMaterial({
       opacity: .99,
-      //transparent: true,
-      //blending: THREE.SubtractiveBlending,
       shininess: 0
     });
 
@@ -586,13 +596,17 @@ class GPU {
     //loadMaterials calls loadObjects as callback which finally kicks off renderLoop
     this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
 
+    this.camera2 =  new THREE.PerspectiveCamera(120,width2/height2,.1,2000);  //this.camera.clone();
+    //this.camera2.aspect = width2 / height2;
+    this.camera2.updateProjectionMatrix();
+    this.renderer2.setSize(width2, height2);
+
   }
 
   //start of class methods ****************************
 
   setParents() {
 
-    //console.log("trying to set parents xxx",this.objects);
 
     const origOrder = Object.keys(this.invObjNumMap);
 
@@ -753,10 +767,16 @@ class GPU {
       return;
     }
 
-    const canvasDim = canvas.getBoundingClientRect();
-    const [width, height] = [canvasDim.width, canvasDim.height];
+    const canvasDim = this.canvas.getBoundingClientRect();
+    //const [width, height] = [canvasDim.width, canvasDim.height];
+    const {width, height} = canvasDim;
+
     this.width = width;
     this.height = height;
+
+    const canvas2Dim = this.canvas2.getBoundingClientRect();
+
+    const {width:width2, height:height2} = canvas2Dim;
 
     //zooming for Perspective vs Orthographic is different so different code here
     let zoomMult = 1;
@@ -782,6 +802,10 @@ class GPU {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
+
+    this.camera2.aspect = width2 / height2;
+    this.camera2.updateProjectionMatrix();
+    this.renderer2.setSize(width2, height2);
 
     this.controls.update();
   }
@@ -1055,9 +1079,23 @@ class GPU {
       
       this.animateArm(time);
       
-      this.controls.update();
+      this.objects[6].getWorldQuaternion(this.quat);
+      this.camera2.rotation.setFromQuaternion(this.quat);
 
+      this.objects[6].getWorldPosition(this.wpos);
+      this.camera2.position.copy(this.wpos);
+
+      //we need to step a little bit down the "z" axis of camera
+      //which of course is the 3rd row of the World View matrix
+      this.camZ.set(0,0,-1);
+      this.camZ.applyQuaternion(this.quat);
+      this.camZ.multiplyScalar(25);
+      this.camera2.position.add(this.camZ);
+  
+      this.controls.update();
       this.renderer.render(this.scene, this.camera);
+      this.renderer2.render(this.scene, this.camera2);
+
     }
   }
 
