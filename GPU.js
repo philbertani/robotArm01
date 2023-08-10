@@ -55,6 +55,7 @@ class GPU {
   mainLight;
   cameraLight;
   canvas = null;
+  canvas2 = null;
   resized = false;
   controls = {};
   showShadows = 0;
