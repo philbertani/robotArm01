@@ -70,8 +70,9 @@ class GPU {
   currentMousePoint = null;
   numLines = 0;
   showText = false;
-  zoom = 1;
+  zoom = 0;
   zoomed = 0;
+  doingZoom = false;
   frustumFudge = 1;
   previousHighLighedIndex = -1;
   infoDiv;
@@ -732,19 +733,22 @@ class GPU {
           lineDiv.addEventListener("mouseleave",unhighlightLine.bind(this));
 
           this.infoDiv.appendChild(lineDiv);
+          this.infoDiv.scrollTop = 1000;
 
         }
       }
     }
     else if (ev.keyCode === 122) {  //key z
-      this.handleResize("handleZoom");
-      this.zoom ^= 1;
+      this.zoom ^= 1;  //zoom out or in
+      this.doingZoom = true;
+      this.handleResize();
     }
   }
 
-  handleResize(handleZoom="") {
+  handleResize(evt) {
+
     if (this.cameraType === this.cameraTypes.Orthographic) {
-      this.handleResizeOrtho(handleZoom);
+      this.handleResizeOrtho(evt);
       return;
     }
 
@@ -755,20 +759,23 @@ class GPU {
 
     //zooming for Perspective vs Orthographic is different so different code here
     let zoomMult = 1;
-    if (handleZoom) {
+
+    if (this.doingZoom) {
       zoomMult = (this.zoom === 0 ) ? 1 : 6;
-      //console.log(zoomMult,this.currentMousePoint);
       if ( zoomMult > 1 && this.currentMousePoint) {
         this.camera.position.divideScalar(6);
         this.controls.target.copy(this.currentMousePoint);
         this.zoomed = 1;
       }
       else if (this.zoomed) {
+        //check that we actually had zoomed out
         this.camera.position.multiplyScalar(6)
         this.controls.target.set(0,0,0);
         this.zoomed = 0;
       }
+      this.doingZoom = false;
     }
+    
 
     //console.log(this)  don't forget to bind the GPU this context to callback functions
     this.camera.aspect = width / height;
@@ -778,14 +785,15 @@ class GPU {
     this.controls.update();
   }
 
-  handleResizeOrtho(handleZoom="") {
+  handleResizeOrtho() {
     const canvasDim = canvas.getBoundingClientRect();
     const [width, height] = [canvasDim.width, canvasDim.height];
     this.width = width;
     this.height = height;
 
+    
     let zoomMult = 1;
-    if (handleZoom) {
+    if (this.doingZoom) {
       zoomMult = (this.zoom === 0 ) ? 1 : 6;
       if ( zoomMult > 1 && this.currentMousePoint) {
         this.controls.target.copy(this.currentMousePoint);
@@ -793,8 +801,9 @@ class GPU {
       else {
         this.controls.target.set(0,0,0);
       }
+      this.doingZoom = false;
     }
-
+    
     const aspect = width / height;
     this.camera.left = (-this.frustumSize * aspect) / 2 / zoomMult;
     this.camera.right = (this.frustumSize * aspect) / 2 / zoomMult;
