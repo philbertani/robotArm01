@@ -59,7 +59,6 @@ class GPU {
   canvas2 = null;
   resized = false;
   controls = {};
-  showShadows = 0;
   pointList = [];
   cameraType = this.cameraTypes.Perspective;
   objNum = 0;
@@ -93,7 +92,6 @@ class GPU {
   tempV = new THREE.Vector3();
   wpos = new THREE.Vector3();
   quat = new THREE.Quaternion();
-
 
   constructor(canvas) {
 
@@ -273,10 +271,12 @@ class GPU {
       this.scene.add(this.bullseye);
       this.scene.add(this.bullseye2);
    
-      const geometry = new THREE.BoxGeometry( 500, 500, 1 );
-
       const railHeight = 30;
 
+      const mirror1 = new THREE.Mesh(  new THREE.BoxGeometry(500, 500, 1)
+        , new  THREE.MeshPhongMaterial( {color:"rgb(70,70,150)"} ) );
+
+      /*
       const mirror1 = new Reflector(
         new THREE.BoxGeometry(500, 500, 1),
         {
@@ -287,15 +287,18 @@ class GPU {
             textureHeight: window.innerHeight * window.devicePixelRatio
         }
       )
-      this.groundPlane = mirror1;
-
-      mirror1.position.z = rootPos.z - railHeight;
-      mirror1.name = "Object#102";
-      mirror1.userData.id = 102;
 
       //this is a shader material which sends color via uniforms
       //so create reference at material.color since we use that later in general
       mirror1.material.color = mirror1.material.uniforms.color.value;
+      */
+
+      this.groundPlane = mirror1;
+
+      mirror1.receiveShadow = true;
+      mirror1.position.z = rootPos.z - railHeight;
+      mirror1.name = "Object#102";
+      mirror1.userData.id = 102;
 
       this.scene.add(mirror1);
 
@@ -304,6 +307,7 @@ class GPU {
         {color: "rgb(30,70,150)", side: THREE.DoubleSide, shininess: 50 } );
       const rail = new THREE.Mesh(railGeo, railMat);
       rail.receiveShadow = true;
+      rail.castShadow = true;
       rail.position.z = rootPos.z - 4;
       rail.position.x = rootPos.x;
       rail.name = "Object#103";
@@ -313,6 +317,7 @@ class GPU {
       const railGeo2 = new THREE.BoxGeometry(2,500,6);
       const rail2 = new THREE.Mesh(railGeo2, railMat);
       rail2.receiveShadow = true;
+      rail2.castShadow = true;
       rail2.position.z = rootPos.z + 3;
       rail2.position.x = rootPos.x - 9;
       rail2.name = "Object#104";
@@ -320,6 +325,8 @@ class GPU {
       this.scene.add(rail2);
 
       const rail3 = rail2.clone();
+      rail3.receiveShadow = true;
+      rail3.castShadow = true;
       rail3.position.x = rootPos.x + 9;
       rail3.name = "Object#105";
       rail3.userData.id=105;
@@ -328,6 +335,7 @@ class GPU {
       const endGeo = new THREE.BoxGeometry(16,4,10);
       const endRail = new THREE.Mesh(endGeo, railMat);
       endRail.receiveShadow = true;
+      endRail.castShadow = true;
       endRail.position.y = 248;
       endRail.position.z = rootPos.z + 4;
       endRail.position.x = rootPos.x;
@@ -336,18 +344,24 @@ class GPU {
       this.scene.add(endRail);
 
       const endRail2 = endRail.clone();
+      endRail2.receiveShadow = true;
+      endRail2.castShadow = true;
       endRail2.position.y = 210;
       endRail2.name = "Object#107";
       endRail2.userData.id=107;
       this.scene.add(endRail2);
 
       const endRail3 = endRail.clone();
+      endRail3.receiveShadow = true;
+      endRail3.castShadow = true;
       endRail3.position.y = -248;
       endRail3.name = "Object#108";
       endRail3.userData.id = 108
       this.scene.add(endRail3);
 
       const endRail4 = endRail.clone();
+      endRail4.receiveShadow = true;
+      endRail4.castShadow = true;
       endRail4.position.y = -210;
       endRail4.name = "Object#109";
       endRail4.userData.id=109;
@@ -361,13 +375,18 @@ class GPU {
       support.rotation.x = Math.PI/2;
 
       support.receiveShadow = true;
+      support.castShadow = true;
       this.scene.add(support);
 
       const support2 = support.clone();
+      support2.receiveShadow = true;
+      support2.castShadow = true;
       support2.position.y = 210;
       this.scene.add(support2);
 
       const support3 = support.clone();
+      support3.receiveShadow = true;
+      support3.castShadow = true;
       support3.position.y = -210;
       this.scene.add(support3);
 
@@ -376,7 +395,7 @@ class GPU {
  
       const grid = new THREE.GridHelper(500,50);
       grid.rotation.x = Math.PI/2;
-      grid.position.z = rootPos.z - railHeight + .5;
+      grid.position.z = rootPos.z - railHeight + 1;
       this.scene.add(grid);
 
       this.prevAngles = Array(this.objects.length).fill(0);
@@ -420,6 +439,8 @@ class GPU {
       this.infoDiv.addEventListener("mouseover",highlightObject.bind(this));
       this.infoDiv.addEventListener("mouseleave",unhighlightObject.bind(this));
   
+      this.roboCam = this.objects[6]; //robot arm grasper cam object #
+
       //finally kick off the render loop - START of ANIMATION and INTERACTION
       this.render();
     }
@@ -466,14 +487,14 @@ class GPU {
 
     this.raycaster = new THREE.Raycaster();
 
-    function setRendererOptions(renderer,width,height) {
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(width, height, true);
-      renderer.setClearColor("rgb(200,200,200)", 1);
+    function setRendererOptions(rndr,width,height) {
+      rndr.setPixelRatio(window.devicePixelRatio);
+      rndr.setSize(width, height, true);
+      rndr.setClearColor("rgb(200,200,200)", 1);
   
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.needsUpdate = true;
-      renderer.shadowMap.type = THREE.VSMShadowMap; //PCFSoftShadowMap;
+      rndr.shadowMap.enabled = true;
+      rndr.shadowMap.needsUpdate = true;
+      rndr.shadowMap.type = THREE.PCFSoftShadowMap; //VSMShadowMap; //PCFSoftShadowMap;
       //VSMShadowMap got rid of all the striping problems ?!@#$#
     }
 
@@ -504,7 +525,7 @@ class GPU {
         break;
 
       case (this.cameraTypes.Perspective):
-        this.camera = new THREE.PerspectiveCamera(50,aspect,.1,2000);
+        this.camera = new THREE.PerspectiveCamera(70,aspect,.1,2000);
         break;
 
       default:
@@ -522,24 +543,33 @@ class GPU {
     this.controls.maxDistance = 500;
     this.controls.zoomSpeed = 1;
 
-
-
-    //this.mainLight = new THREE.PointLight(0xffffff, 1.2);
-    this.mainLight = new THREE.DirectionalLight(0xFFFFFF,.7);
-    this.mainLight.position.set(0,0,200); //(-100,-100,200);
-
+    this.mainLight = new THREE.DirectionalLight(0xFFFFFF,.6);
+    this.mainLight.position.set(0,0,200); // directly overhead
     this.setShadow(this.mainLight);
     this.scene.add(this.mainLight);
 
+    this.light2 = new THREE.PointLight(0xf0ffff,.3);
+    this.setShadow(this.light2);
+    this.light2.shadowCameraVisible = true
+    this.scene.add(this.light2);
+    //light2 tracks camera position but with x and y negated
+
+    this.light3 = new THREE.PointLight(0xffffff, .4);
+    this.scene.add(this.camera);
+    this.camera.add(this.light3);
+
+    this.camera2 =  new THREE.PerspectiveCamera(120,width2/height2,.1,2000);
+    this.camera2.updateProjectionMatrix();
+    this.renderer2.setSize(width2, height2);
+
+    //const helper = new THREE.CameraHelper( this.light2.shadow.camera );
+    //this.scene.add( helper );
+    //const helper = new THREE.CameraHelper( this.camera2 );
+    //this.scene.add( helper );
+
     //adding a light that casts no shadows makes 
     //the directional light softer
-    this.light2 = new THREE.PointLight(0xffffff,.4);
-
-    this.setShadow(this.light2);
-    this.camera.add(this.light2);
-    this.scene.add(this.camera);
-
-    this.scene.add( new THREE.AmbientLight( 0xffff00, 0.3 ) );
+    this.scene.add( new THREE.AmbientLight( 0xfff010, 0.3 ) );
 
     this.canvas.addEventListener("mousemove", checkMouse.bind(this), false);
     this.mouseObjectElem = document.getElementById("mouseObject");
@@ -547,8 +577,7 @@ class GPU {
 
     this.lineMaterial = new THREE.MeshPhongMaterial({
       color: "rgb(25,200,25)",
-      shininess: 0,
-      
+      shininess: 0,   
     });
 
     this.selectPointMaterial = new THREE.MeshPhongMaterial({
@@ -596,18 +625,11 @@ class GPU {
     //loadMaterials calls loadObjects as callback which finally kicks off renderLoop
     this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
 
-    this.camera2 =  new THREE.PerspectiveCamera(120,width2/height2,.1,2000);  //this.camera.clone();
-    //this.camera2.aspect = width2 / height2;
-    this.camera2.updateProjectionMatrix();
-    this.renderer2.setSize(width2, height2);
-
   }
 
   //start of class methods ****************************
 
   setParents() {
-
-
     const origOrder = Object.keys(this.invObjNumMap);
 
     for (let i=1; i<origOrder.length; i++) {
@@ -720,6 +742,8 @@ class GPU {
 
           //console.log(newEdge)
           this.scene.add(newEdge);
+          newEdge.castShadow = true;
+          newEdge.receiveShadow = true;
 
           const label = document.createElement("div");
           label.id = "line" + newEdge.index;
@@ -768,7 +792,6 @@ class GPU {
     }
 
     const canvasDim = this.canvas.getBoundingClientRect();
-    //const [width, height] = [canvasDim.width, canvasDim.height];
     const {width, height} = canvasDim;
 
     this.width = width;
@@ -848,7 +871,7 @@ class GPU {
     light.shadow.camera.near = 0.1;
     light.shadow.camera.far = 2000;
     light.shadow.normalBias = .7;  //offset along surface normal for shadow
-    //light.shadow.bias = .0001  //offset for deciding whether surface is in shadow
+    //light.shadow.bias = .0002  //offset for deciding whether surface is in shadow
     //light.shadow.blurSamples = 64;
 
     //have to set the range of the orthographic shadow camera
@@ -1079,10 +1102,10 @@ class GPU {
       
       this.animateArm(time);
       
-      this.objects[6].getWorldQuaternion(this.quat);
+      this.roboCam.getWorldQuaternion(this.quat);
       this.camera2.rotation.setFromQuaternion(this.quat);
 
-      this.objects[6].getWorldPosition(this.wpos);
+      this.roboCam.getWorldPosition(this.wpos);
       this.camera2.position.copy(this.wpos);
 
       //we need to step a little bit down the "z" axis of camera
@@ -1092,7 +1115,15 @@ class GPU {
       this.camZ.multiplyScalar(25);
       this.camera2.position.add(this.camZ);
   
+      //negate x and y of camera pos so we always see point light shadow in the main view
+      this.camera.getWorldPosition(this.wpos);
+      this.wpos.x *= -1;
+      this.wpos.y *= -1;
+      this.wpos.z *= 2;
+      this.light2.position.copy(this.wpos);
+
       this.controls.update();
+
       this.renderer.render(this.scene, this.camera);
       this.renderer2.render(this.scene, this.camera2);
 
