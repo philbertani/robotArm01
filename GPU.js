@@ -299,8 +299,16 @@ class GPU {
       mirror1.position.z = rootPos.z - railHeight;
       mirror1.name = "Object#102";
       mirror1.userData.id = 102;
-
       this.scene.add(mirror1);
+
+      const randomMaterial = new THREE.MeshPhongMaterial({color: "rgb(100,0,150)"});
+      const tdim = 10;
+      const targetObject = new THREE.Mesh(new THREE.BoxGeometry(tdim,tdim,tdim), randomMaterial);
+      targetObject.position.set(-50,0,this.groundPlane.position.z+tdim/2);
+      targetObject.name = "Object#200";
+      targetObject.castShadow = true;
+      targetObject.receiveShadow = true;
+      this.scene.add(targetObject);
 
       const railGeo = new THREE.BoxGeometry(11,500,6);
       const railMat = new THREE.MeshPhongMaterial( 
@@ -601,6 +609,7 @@ class GPU {
     });
 
     this.bullseyeMaterial = this.pointMaterial2.clone();
+    this.bullseyeMaterial.opacity = .3;
     this.bullseyeMaterial.color.setRGB(.6,1,.2);
     this.bullseyeMaterial2 = this.pointMaterial3.clone();
     this.bullseyeMaterial2.color.setRGB(0,0,0);
@@ -615,7 +624,7 @@ class GPU {
     this.sphere2 = new THREE.SphereGeometry(.8);
     this.sphere3 = new THREE.SphereGeometry(2.);
     this.bigSphere = new THREE.SphereGeometry(1.);
-    this.bullseyeSphere = new THREE.SphereGeometry(10);
+    this.bullseyeSphere = new THREE.BoxGeometry(12,12,12); //new THREE.SphereGeometry(10);
     this.bullseyeSphere2 = new THREE.SphereGeometry(1);
  
     window.GPU = this;
@@ -1069,7 +1078,7 @@ class GPU {
 
       this.objects[17].getWorldPosition(this.wpos); 
       this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #20
-      this.bullseye.position.z = this.groundPlane.position.z;
+      this.bullseye.position.z = this.groundPlane.position.z + 6;
       this.bullseye2.position.copy(this.bullseye.position);
 
   }
@@ -1112,7 +1121,7 @@ class GPU {
       //which of course is the 3rd row of the World View matrix
       this.camZ.set(0,0,-1);
       this.camZ.applyQuaternion(this.quat);
-      this.camZ.multiplyScalar(25);
+      this.camZ.multiplyScalar(20.5);
       this.camera2.position.add(this.camZ);
   
       //negate x and y of camera pos so we always see point light shadow in the main view
