@@ -454,8 +454,6 @@ class GPU {
       this.infoDiv.addEventListener("mouseover",highlightObject.bind(this));
       this.infoDiv.addEventListener("mouseleave",unhighlightObject.bind(this));
   
-
-
       //finally kick off the render loop - START of ANIMATION and INTERACTION
       this.render();
     }
@@ -851,7 +849,6 @@ class GPU {
       this.doingZoom = false;
     }
     
-
     //console.log(this)  don't forget to bind the GPU this context to callback functions
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
@@ -870,7 +867,6 @@ class GPU {
     this.width = width;
     this.height = height;
 
-    
     let zoomMult = 1;
     if (this.doingZoom) {
       zoomMult = (this.zoom === 0 ) ? 1 : 6;
@@ -1110,8 +1106,10 @@ class GPU {
       //grasper cam view - #22 is the rail for the 2 grasper claws
       this.objects[17].getWorldPosition(this.wpos); 
       this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #22
-      this.bullseye.position.z = this.groundPlane.position.z + 6;
+      this.bullseye.position.z = this.groundPlane.position.z + this.bullseye.geometry.parameters.depth/2;
       this.bullseye2.position.copy(this.bullseye.position);
+
+
 
   }
 
