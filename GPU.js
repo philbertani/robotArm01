@@ -91,6 +91,7 @@ class GPU {
   camZ = new THREE.Vector3();
   tempV = new THREE.Vector3();
   wpos = new THREE.Vector3();
+  origCam = new THREE.Vector3();
   quat = new THREE.Quaternion();
 
   constructor(canvas) {
@@ -257,14 +258,20 @@ class GPU {
       this.fortyfiveXZ = new THREE.Vector3(-.9,0,1).normalize();
 
       this.rootPos = this.objects[20].position;  //parent - all objects are children of children of this
+      this.roboCam = this.objects[6]; //robot arm grasper cam object #
+
       const rootPos = this.rootPos;
 
       this.currentBigMouseSphere = new THREE.Mesh(this.bigSphere,this.selectPointMaterial);
       this.currentBigMouseSphere.visible = false;
       this.currentBiggerMouseSphere = new THREE.Mesh(this.sphere3,this.pointMaterial2);
       this.currentBiggerMouseSphere.visible = false;
+
       this.bullseye = new THREE.Mesh(this.bullseyeSphere,this.bullseyeMaterial);
+      this.bullseye.name = "Object#Bullseye";
+
       this.bullseye2 = new THREE.Mesh(this.bullseyeSphere2,this.bullseyeMaterial2);
+      this.bullseye2.castShadow = true;
 
       this.scene.add(this.currentBigMouseSphere);
       this.scene.add(this.currentBiggerMouseSphere);
@@ -274,7 +281,7 @@ class GPU {
       const railHeight = 30;
 
       const mirror1 = new THREE.Mesh(  new THREE.BoxGeometry(500, 500, 1)
-        , new  THREE.MeshPhongMaterial( {color:"rgb(70,70,150)"} ) );
+        , new  THREE.MeshPhongMaterial( {color:"rgb(70,70,150)", shininess:30} ) );
 
       /*
       const mirror1 = new Reflector(
@@ -304,7 +311,7 @@ class GPU {
       const randomMaterial = new THREE.MeshPhongMaterial({color: "rgb(100,0,150)"});
       const tdim = 10;
       const targetObject = new THREE.Mesh(new THREE.BoxGeometry(tdim,tdim,tdim), randomMaterial);
-      targetObject.position.set(-50,0,this.groundPlane.position.z+tdim/2);
+      targetObject.position.set(-50,100,this.groundPlane.position.z+tdim/2);
       targetObject.name = "Object#200";
       targetObject.castShadow = true;
       targetObject.receiveShadow = true;
@@ -447,7 +454,7 @@ class GPU {
       this.infoDiv.addEventListener("mouseover",highlightObject.bind(this));
       this.infoDiv.addEventListener("mouseleave",unhighlightObject.bind(this));
   
-      this.roboCam = this.objects[6]; //robot arm grasper cam object #
+
 
       //finally kick off the render loop - START of ANIMATION and INTERACTION
       this.render();
@@ -609,8 +616,10 @@ class GPU {
     });
 
     this.bullseyeMaterial = this.pointMaterial2.clone();
-    this.bullseyeMaterial.opacity = .3;
-    this.bullseyeMaterial.color.setRGB(.6,1,.2);
+    this.bullseyeMaterial.opacity = .6;
+    this.bullseyeMaterial.color.setRGB(1,1,1);
+    this.bullseyeMaterial.shininess = 80;
+
     this.bullseyeMaterial2 = this.pointMaterial3.clone();
     this.bullseyeMaterial2.color.setRGB(0,0,0);
 
@@ -625,7 +634,7 @@ class GPU {
     this.sphere3 = new THREE.SphereGeometry(2.);
     this.bigSphere = new THREE.SphereGeometry(1.);
     this.bullseyeSphere = new THREE.BoxGeometry(12,12,12); //new THREE.SphereGeometry(10);
-    this.bullseyeSphere2 = new THREE.SphereGeometry(1);
+    this.bullseyeSphere2 = new THREE.SphereGeometry(3);
  
     window.GPU = this;
 
@@ -697,7 +706,7 @@ class GPU {
     // edge from X to Y
     const edge = new THREE.Vector3().subVectors(pointY, pointX);
     // cylinder: radiusAtTop, radiusAtBottom,
-    //     height, radiusSegments, heightSegments
+    // height, radiusSegments, heightSegments
     const edgeGeometry = new THREE.CylinderGeometry(
       .5,
       .5,
@@ -716,11 +725,13 @@ class GPU {
     mesh.position.copy(edgePos);
     mesh.edgeLength = edge.length();
 
-    this.lineObjectElem.innerHTML = "<p>" +
-      "<br>Line # and Length is: " + this.numLines + ", " + Math.trunc(mesh.edgeLength*1000)/1000;
-      + "/p>"
+    this.lineObjectElem.innerHTML = this.lineLength(this.numLines,mesh.edgeLength);
 
     return mesh;
+  }
+
+  lineLength(lineNum, lineLen) {
+    return "<p><br>Line # and Length is: " + lineNum + ", " + 2 * Math.trunc(lineLen*1000)/1000 + "</p>";
   }
 
   handleKeyPress(ev) {
@@ -743,6 +754,8 @@ class GPU {
           const newEdge = this.cylinderMesh(
             this.measurePoints[prev],this.currentMousePoint);
 
+          //console.log("edge points",this.measurePoints[prev], this.currentMousePoint);
+
           newEdge.name = "line " + this.numLines;
           newEdge.index = this.numLines;
 
@@ -763,7 +776,7 @@ class GPU {
           this.lineLabels.push(label);
 
           const lineDiv = document.createElement("div");
-          lineDiv.innerHTML = newEdge.name + ", " + rr(newEdge.edgeLength);
+          lineDiv.innerHTML = newEdge.name + ", " + 2 * rr(newEdge.edgeLength);
           lineDiv.className = "objDiv";
           lineDiv.id = newEdge.index;
 
@@ -816,13 +829,22 @@ class GPU {
     if (this.doingZoom) {
       zoomMult = (this.zoom === 0 ) ? 1 : 6;
       if ( zoomMult > 1 && this.currentMousePoint) {
-        this.camera.position.divideScalar(6);
-        this.controls.target.copy(this.currentMousePoint);
+
+        //zooming in on a point is more complicated in perspective projection
+        this.camera.getWorldPosition(this.tempV);
+        this.origCam.copy(this.tempV);
+        this.currentBigMouseSphere.getWorldPosition(this.wpos);
+        this.tempV.sub(this.wpos); //get vector from cam to target point
+        const ln = this.tempV.length(); //get the length
+        this.tempV.normalize().multiplyScalar(ln/1.2); //don't overshoot or else camera view flips
+        this.camera.position.sub(this.tempV); //move the camera along the vector from above
+        this.controls.target.copy(this.wpos); //reset the lookAt target of controls  
         this.zoomed = 1;
+
       }
       else if (this.zoomed) {
         //check that we actually had zoomed out
-        this.camera.position.multiplyScalar(6)
+        this.camera.position.copy(this.origCam); //retrieve the original cam pos
         this.controls.target.set(0,0,0);
         this.zoomed = 0;
       }
@@ -854,9 +876,11 @@ class GPU {
       zoomMult = (this.zoom === 0 ) ? 1 : 6;
       if ( zoomMult > 1 && this.currentMousePoint) {
         this.controls.target.copy(this.currentMousePoint);
+        this.zoomed = 1;
       }
-      else {
+      else if (this.zoomed) {
         this.controls.target.set(0,0,0);
+        this.zoomed = 0;
       }
       this.doingZoom = false;
     }
@@ -933,9 +957,12 @@ class GPU {
 
         if (point.object.edgeLength) {
           this.lineObjectElem.innerHTML = "";
-          this.lineObjectElem.innerHTML = "<p>" +
-            "<br>Line # and Length is: " + point.object.index + ", " + Math.trunc(point.object.edgeLength*1000)/1000;
-            + "/p>"
+
+          
+          //this.lineObjectElem.innerHTML = "<p>" +
+          //  "<br>Line # and Length is: " + point.object.index + ", " + this.lineLength(point.object.edgeLength);
+          //  + "/p>"
+          this.lineObjectElem.innerHTML = this.lineLength(point.object.index, point.object.edgeLength);
         }
 
         //only pick the coordinates of actual points in the original objects or else
@@ -987,6 +1014,8 @@ class GPU {
           //this is static move out of loop and do only once
           const newColor = new THREE.Color(1-colorToUse.r,1-colorToUse.g,1-colorToUse.b);
           this.currentBiggerMouseSphere.material.color.set(newColor);
+
+          //console.log("xxxxxxxxxxxxxxxxxxxx",pointToUse);
 
           function rr(cc) {
             return Math.trunc(cc*1000)/1000;
@@ -1071,13 +1100,16 @@ class GPU {
 
       this.objects[this.joints[4]].rotation.x = this.SV(4)*Math.PI;
       this.objects[this.joints[5]].rotation.z = this.SV(5)*Math.PI;
+
+      //grasper
       this.objects[15].position.y = 6 + this.SV(6)*6;
       this.objects[12].position.y = -6 - this.SV(6)*6;
 
       this.rootPos.y = -this.SV(7)*200;  //root position translation along rail
 
+      //grasper cam view - #22 is the rail for the 2 grasper claws
       this.objects[17].getWorldPosition(this.wpos); 
-      this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #20
+      this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #22
       this.bullseye.position.z = this.groundPlane.position.z + 6;
       this.bullseye2.position.copy(this.bullseye.position);
 
