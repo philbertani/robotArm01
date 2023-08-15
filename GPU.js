@@ -636,10 +636,39 @@ class GPU {
  
     window.GPU = this;
 
+    //load obj or scene from threejs json file
+    //threejs editor is superior to tinkercad in a lot of ways
+    const loader = new THREE.ObjectLoader();
+    function loadJson(obj) {
+      //if scene is exported, choose obj.children[0]
+      // set obj.children[0].parent = null;
+      const newArm = obj;
+      const scaleUp = 4;
+      newArm.position.set(0,50,-50);
+      newArm.rotation.x = Math.PI/2;
+      newArm.scale.x = scaleUp;
+      newArm.scale.y = scaleUp;
+      newArm.scale.z = scaleUp;
+      console.log("arm group",obj);
+      this.scene.add(newArm);
+    }
+    loader.load(
+	    "armScene01.json",
+      loadJson.bind(this),
+	    function ( xhr ) {
+	  	  console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+	    },
+	    function ( err ) {
+		    console.error( 'An error happened' );
+	    }
+    );
+
     this.mtlL = new MTLLoader();
-    this.objL = new OBJLoader();
+    this.objL = new OBJLoader();  //need OBJLoader add on for stl,mtl files
     //loadMaterials calls loadObjects as callback which finally kicks off renderLoop
     this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
+
+
 
   }
 
