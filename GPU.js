@@ -668,8 +668,6 @@ class GPU {
     //loadMaterials calls loadObjects as callback which finally kicks off renderLoop
     this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
 
-
-
   }
 
   //start of class methods ****************************
