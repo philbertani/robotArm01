@@ -83,6 +83,7 @@ class GPU {
   highlightObject=null;
   tinkerCadGroup;
   invObjNumMap = {};  //Tinkercad order to Correct order
+  robotNum = 0;
 
   //keep a bunch of Vector3 handy so we don't have to thrash memory
   light2Pos = new THREE.Vector3();
@@ -251,6 +252,9 @@ class GPU {
       for (let i=1; i<=8; i++) {
         this.jointSliders.push(document.getElementById("joint0"+i));
       }
+
+      //save robot selector radio buttons for later use
+      this.robotButtons = document.querySelectorAll('input[name="robotNum"]');
 
       //console.log("joint sliders",this.jointSliders);
       this.joints = [22,13,11,14,8,17]; //the tinkercad object numbers of the joints in order from 0 to 4 (1-5 for user)
@@ -652,6 +656,8 @@ class GPU {
       console.log("arm group",obj);
 
       this.newArm = newArm;
+      this.newArm.scaleUp = scaleUp;
+
       this.scene.add(newArm);
 
       //chaining callbacks nasty - use async await
@@ -1142,15 +1148,52 @@ class GPU {
       this.bullseye2.position.copy(this.bullseye.position);
   }
 
+  animateArm2(time) {
+    for (let i=0; i<7; i++) {
+      this.newArm.joints[i].rotation.y = this.SV(i)*Math.PI;
+    }
+  }
+
   traverseGroup(node) {
     if (node) {
       //console.log('zzzzzzzzzzz',node.name??"xxx", node.children.length);
       if (node.name.substr(0,5) === "joint") {
         console.log("found a joint", node.name);
-        this.newArm.joints.push(node);
+
+        const jointData = node.name.split("#");
+
+        if (jointData[1] === "grasper" ) {
+          if (jointData[2] === "root") {
+            this.newArm.grasper.root = node;
+          }
+          else if ( jointData[2] === "1") {
+            this.newArm.grasper.claw01 = node;
+          }
+          else if ( jointData[2] === "2") {
+            this.newArm.grasper.claw02 = node;
+          }
+        }
+        else if (jointData[1] === "robocam") {
+          //this is the location for tracking robot camera
+          this.newArm.roboCam = node;
+        }
+        else {
+          this.newArm.joints.push(node);
+        }
       }
       if ( node.children && node.children.length > 0) { node.children.forEach(x=>this.traverseGroup(x))}
     }
+  }
+
+  getRobotNum() {
+    for (const robotButton of this.robotButtons) {
+      if (robotButton.checked) {
+        return robotButton.value - 1;
+        break;
+      }
+    }
+
+    throw new Error ("something aweful happened with selecting a Robot");
   }
 
   render() {
@@ -1160,6 +1203,9 @@ class GPU {
     this.newArm.grasper = [];
     this.traverseGroup(this.newArm);
     
+    //console.log("grasper",this.newArm.grasper);
+    //remember that this whole group is scaled up by a factor of 4
+
     this.newArm.rotation.z = Math.PI/4;
     this.newArm.joints[0].rotation.y = -Math.PI/2;
     this.newArm.joints[1].rotation.y = Math.PI/4;
@@ -1189,14 +1235,32 @@ class GPU {
       time *= 0.001; //convert from milliseconds to seconds
       frameCount++;
 
+      const prevRobotNum = this.robotNum;
+      this.robotNum = this.getRobotNum();
+      if ( prevRobotNum !== this.robotNum) {
+        console.log("we switched robots to ",this.robotNum);
+      }
+
       this.raycastFromCameraToMouse();
       
-      this.animateArm(time);
+      let roboCam;
+      if (this.robotNum === 0) {
+        this.animateArm(time);
+        roboCam = this.roboCam;
+      }
+      else if (this.robotNum === 1) {
+        this.animateArm2(time);
+        roboCam = this.newArm.roboCam;
+      }
       
-      this.roboCam.getWorldQuaternion(this.quat);
+      roboCam.getWorldQuaternion(this.quat);
       this.camera2.rotation.setFromQuaternion(this.quat);
 
-      this.roboCam.getWorldPosition(this.wpos);
+      if (this.robotNum === 1) {
+        this.camera2.rotation.x -= Math.PI/2;
+      }
+
+      roboCam.getWorldPosition(this.wpos);
       this.camera2.position.copy(this.wpos);
 
       //we need to step a little bit down the "z" axis of camera

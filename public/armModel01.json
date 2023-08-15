@@ -1508,7 +1508,7 @@
 																																															{
 																																																"uuid": "a1f5f480-7a61-4a65-b9f4-f6f89d6f1753",
 																																																"type": "Mesh",
-																																																"name": "Cylinder",
+																																																"name": "joint#3",
 																																																"castShadow": true,
 																																																"receiveShadow": true,
 																																																"layers": 1,
@@ -1520,7 +1520,7 @@
 																																																	{
 																																																		"uuid": "04e56db9-8ea8-4b30-9ec2-f8c63e85c569",
 																																																		"type": "Mesh",
-																																																		"name": "joint#3",
+																																																		"name": "xjoint#3",
 																																																		"castShadow": true,
 																																																		"receiveShadow": true,
 																																																		"layers": 1,
@@ -1544,7 +1544,7 @@
 																																																					{
 																																																						"uuid": "c3555a89-e266-44f1-999b-fd95e582a416",
 																																																						"type": "Mesh",
-																																																						"name": "Cylinder",
+																																																						"name": "joint#4",
 																																																						"castShadow": true,
 																																																						"receiveShadow": true,
 																																																						"layers": 1,
@@ -1556,7 +1556,7 @@
 																																																							{
 																																																								"uuid": "14c8186b-a1c3-4d68-94b4-940972a05558",
 																																																								"type": "Mesh",
-																																																								"name": "joint#4",
+																																																								"name": "xjoint#4",
 																																																								"castShadow": true,
 																																																								"receiveShadow": true,
 																																																								"layers": 1,
@@ -1580,7 +1580,7 @@
 																																																											{
 																																																												"uuid": "fda9722e-5547-4443-8eb9-bdcaefde9df1",
 																																																												"type": "Mesh",
-																																																												"name": "Cylinder",
+																																																												"name": "joint#5",
 																																																												"castShadow": true,
 																																																												"receiveShadow": true,
 																																																												"layers": 1,
@@ -1592,7 +1592,7 @@
 																																																													{
 																																																														"uuid": "d81bb85b-01a6-42aa-830a-b1d0623dcdcb",
 																																																														"type": "Mesh",
-																																																														"name": "joint#5",
+																																																														"name": "head",
 																																																														"castShadow": true,
 																																																														"receiveShadow": true,
 																																																														"layers": 1,
@@ -1616,7 +1616,7 @@
 																																																																	{
 																																																																		"uuid": "7b022740-7b21-46e4-8aee-64a1f2966b3c",
 																																																																		"type": "Mesh",
-																																																																		"name": "Cylinder",
+																																																																		"name": "joint#robocam",
 																																																																		"castShadow": true,
 																																																																		"receiveShadow": true,
 																																																																		"layers": 1,
@@ -1662,7 +1662,7 @@
 																																																																									{
 																																																																										"uuid": "71193f6d-01d5-4baa-891e-fec2ebae671e",
 																																																																										"type": "Mesh",
-																																																																										"name": "joint#grapser",
+																																																																										"name": "joint#grasper#root",
 																																																																										"castShadow": true,
 																																																																										"receiveShadow": true,
 																																																																										"layers": 1,
@@ -1674,7 +1674,7 @@
 																																																																											{
 																																																																												"uuid": "dad7a16e-6ec4-465c-b852-052e97286e39",
 																																																																												"type": "Mesh",
-																																																																												"name": "joint#claw01",
+																																																																												"name": "joint#grasper#1",
 																																																																												"castShadow": true,
 																																																																												"receiveShadow": true,
 																																																																												"layers": 1,
@@ -1686,7 +1686,7 @@
 																																																																											{
 																																																																												"uuid": "89f28485-e449-4b5c-8f08-91f1bf109dcd",
 																																																																												"type": "Mesh",
-																																																																												"name": "joint#claw02",
+																																																																												"name": "joint#grasper#2",
 																																																																												"castShadow": true,
 																																																																												"receiveShadow": true,
 																																																																												"layers": 1,
