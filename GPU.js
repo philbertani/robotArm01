@@ -644,16 +644,26 @@ class GPU {
       // set obj.children[0].parent = null;
       const newArm = obj;
       const scaleUp = 4;
-      newArm.position.set(0,50,-50);
+      newArm.position.set(10,50,-50);
       newArm.rotation.x = Math.PI/2;
       newArm.scale.x = scaleUp;
       newArm.scale.y = scaleUp;
       newArm.scale.z = scaleUp;
       console.log("arm group",obj);
+
+      this.newArm = newArm;
       this.scene.add(newArm);
+
+      //chaining callbacks nasty - use async await
+      this.mtlL = new MTLLoader();
+      this.objL = new OBJLoader();  //need OBJLoader add on for stl,mtl files
+      //loadMaterials calls loadObjects as callback which finally kicks off renderLoop
+      this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
+
     }
+
     loader.load(
-	    "armScene01.json",
+	    "armModel01.json",
       loadJson.bind(this),
 	    function ( xhr ) {
 	  	  console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
@@ -662,11 +672,6 @@ class GPU {
 		    console.error( 'An error happened' );
 	    }
     );
-
-    this.mtlL = new MTLLoader();
-    this.objL = new OBJLoader();  //need OBJLoader add on for stl,mtl files
-    //loadMaterials calls loadObjects as callback which finally kicks off renderLoop
-    this.mtlL.setPath("./").load("obj.mtl", loadMaterials.bind(this));
 
   }
 
@@ -1135,12 +1140,32 @@ class GPU {
       this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #22
       this.bullseye.position.z = this.groundPlane.position.z + this.bullseye.geometry.parameters.depth/2;
       this.bullseye2.position.copy(this.bullseye.position);
+  }
 
-
-
+  traverseGroup(node) {
+    if (node) {
+      //console.log('zzzzzzzzzzz',node.name??"xxx", node.children.length);
+      if (node.name.substr(0,5) === "joint") {
+        console.log("found a joint", node.name);
+        this.newArm.joints.push(node);
+      }
+      if ( node.children && node.children.length > 0) { node.children.forEach(x=>this.traverseGroup(x))}
+    }
   }
 
   render() {
+
+    //do final initialization of stuff here
+    this.newArm.joints = [];
+    this.newArm.grasper = [];
+    this.traverseGroup(this.newArm);
+    
+    this.newArm.rotation.z = Math.PI/4;
+    this.newArm.joints[0].rotation.y = -Math.PI/2;
+    this.newArm.joints[1].rotation.y = Math.PI/4;
+    this.newArm.joints[4].rotation.y = -Math.PI/2;
+    this.newArm.joints[5].rotation.y = -Math.PI/2;
+    this.newArm.joints[6].rotation.y = Math.PI/2;
 
     //do some FPS book keeping
     console.log("in render");
