@@ -575,7 +575,7 @@ class GPU {
     this.scene.add(this.camera);
     this.camera.add(this.light3);
 
-    this.camera2 =  new THREE.PerspectiveCamera(120,width2/height2,.1,2000);
+    this.camera2 =  new THREE.PerspectiveCamera(90,width2/height2,.1,2000);
     this.camera2.updateProjectionMatrix();
     this.renderer2.setSize(width2, height2);
 
@@ -647,8 +647,7 @@ class GPU {
       //if scene is exported, choose obj.children[0]
       // set obj.children[0].parent = null;
       const newArm = obj;
-      const scaleUp = 4;
-      newArm.position.set(10,50,-50);
+      const scaleUp = 4.1;
       newArm.rotation.x = Math.PI/2;
       newArm.scale.x = scaleUp;
       newArm.scale.y = scaleUp;
@@ -656,7 +655,7 @@ class GPU {
       console.log("arm group",obj);
 
       this.newArm = newArm;
-      this.newArm.scaleUp = scaleUp;
+      this.newArm.scaleUp = scaleUp;  //careful changing this - roboCam distance needs to change
 
       this.scene.add(newArm);
 
@@ -1143,15 +1142,64 @@ class GPU {
 
       //grasper cam view - #22 is the rail for the 2 grasper claws
       this.objects[17].getWorldPosition(this.wpos); 
-      this.bullseye.position.set(this.wpos.x,this.wpos.y,0); //copy(this.wpos);  //object #22
-      this.bullseye.position.z = this.groundPlane.position.z + this.bullseye.geometry.parameters.depth/2;
-      this.bullseye2.position.copy(this.bullseye.position);
+      this.setBullsEyePos(this.wpos);
+   
+      // ************ roboCam adjustment *****************
+      const roboCam = this.roboCam;
+      roboCam.getWorldPosition(this.wpos);
+      this.camera2.position.copy(this.wpos);
+
+      //we need to step a little bit down the "z" axis of camera
+      //which of course is the 3rd row of the World View matrix
+
+      roboCam.getWorldQuaternion(this.quat);
+      this.camera2.rotation.setFromQuaternion(this.quat);
+
+      this.camZ.set(0,0,-1);
+      this.camZ.applyQuaternion(this.quat);
+      this.camZ.multiplyScalar(20.5);
+      this.camera2.position.add(this.camZ);
+
   }
 
   animateArm2(time) {
+     //so far we have different processes for the models created by different
+     //programs , need to create an adapter 
     for (let i=0; i<7; i++) {
       this.newArm.joints[i].rotation.y = this.SV(i)*Math.PI;
     }
+
+    this.newArm.grasper.root.getWorldPosition(this.wpos);
+    this.setBullsEyePos(this.wpos);
+
+    // ******* roboCam adjustment ************************
+    const roboCam = this.newArm.roboCamRef;
+            
+    roboCam.getWorldPosition(this.wpos);
+    this.camera2.position.copy(this.wpos);
+
+    //have to rotate around the robocam joint by -90 before getting the World Quat
+    //to get camera to point in correct direction
+    roboCam.visible = false;
+    roboCam.rotation.y -= Math.PI/2;
+    roboCam.getWorldQuaternion(this.quat);
+    roboCam.rotation.y += Math.PI/2;
+    roboCam.visible = true;
+    //then we have to restore it
+
+    this.camera2.rotation.setFromQuaternion(this.quat);
+
+    this.camZ.set(0,0,-1);
+    this.camZ.applyQuaternion(this.quat);
+    this.camZ.multiplyScalar(20.5);
+    this.camera2.position.add(this.camZ);
+
+  }
+
+  setBullsEyePos(wpos) {
+    this.bullseye.position.set(wpos.x,wpos.y,0); //copy(this.wpos);  //object #22
+    this.bullseye.position.z = this.groundPlane.position.z + this.bullseye.geometry.parameters.depth/2;
+    this.bullseye2.position.copy(this.bullseye.position);
   }
 
   traverseGroup(node) {
@@ -1165,6 +1213,7 @@ class GPU {
         if (jointData[1] === "grasper" ) {
           if (jointData[2] === "root") {
             this.newArm.grasper.root = node;
+            //this.newArm.roboCam = node;
           }
           else if ( jointData[2] === "1") {
             this.newArm.grasper.claw01 = node;
@@ -1176,6 +1225,9 @@ class GPU {
         else if (jointData[1] === "robocam") {
           //this is the location for tracking robot camera
           this.newArm.roboCam = node;
+        }
+        else if (jointData[1] === "robocamref") {
+          this.newArm.roboCamRef = node;  
         }
         else {
           this.newArm.joints.push(node);
@@ -1196,8 +1248,7 @@ class GPU {
     throw new Error ("something aweful happened with selecting a Robot");
   }
 
-  render() {
-
+  finalInitialization() {
     //do final initialization of stuff here
     this.newArm.joints = [];
     this.newArm.grasper = [];
@@ -1205,13 +1256,27 @@ class GPU {
     
     //console.log("grasper",this.newArm.grasper);
     //remember that this whole group is scaled up by a factor of 4
-
-    this.newArm.rotation.z = Math.PI/4;
-    this.newArm.joints[0].rotation.y = -Math.PI/2;
-    this.newArm.joints[1].rotation.y = Math.PI/4;
+    this.newArm.position.set(-80,50,this.groundPlane.position.z);
+    //this.newArm.rotation.z = Math.PI/4;
+    this.newArm.joints[0].rotation.y = -Math.PI/2 + Math.PI;
+    //this.newArm.joints[1].rotation.y = Math.PI/4;
     this.newArm.joints[4].rotation.y = -Math.PI/2;
     this.newArm.joints[5].rotation.y = -Math.PI/2;
     this.newArm.joints[6].rotation.y = Math.PI/2;
+  }
+
+  adjustCamLight() {
+        //negate x and y of camera pos so we always see point light shadow in the main view
+        this.camera.getWorldPosition(this.wpos);
+        this.wpos.x *= -1;
+        this.wpos.y *= -1;
+        this.wpos.z *= 2;
+        this.light2.position.copy(this.wpos);
+  }
+
+  render() {
+
+    this.finalInitialization();
 
     //do some FPS book keeping
     console.log("in render");
@@ -1223,6 +1288,7 @@ class GPU {
 
     function renderLoop(time) {
 
+      //keep render loop lean - only call functions - no real code
       requestAnimationFrame(renderLoop.bind(this));
 
       //throttle the fps because without it just maxes
@@ -1243,43 +1309,19 @@ class GPU {
 
       this.raycastFromCameraToMouse();
       
-      let roboCam;
       if (this.robotNum === 0) {
         this.animateArm(time);
-        roboCam = this.roboCam;
       }
       else if (this.robotNum === 1) {
         this.animateArm2(time);
-        roboCam = this.newArm.roboCam;
-      }
-      
-      roboCam.getWorldQuaternion(this.quat);
-      this.camera2.rotation.setFromQuaternion(this.quat);
-
-      if (this.robotNum === 1) {
-        this.camera2.rotation.x -= Math.PI/2;
       }
 
-      roboCam.getWorldPosition(this.wpos);
-      this.camera2.position.copy(this.wpos);
-
-      //we need to step a little bit down the "z" axis of camera
-      //which of course is the 3rd row of the World View matrix
-      this.camZ.set(0,0,-1);
-      this.camZ.applyQuaternion(this.quat);
-      this.camZ.multiplyScalar(20.5);
-      this.camera2.position.add(this.camZ);
-  
-      //negate x and y of camera pos so we always see point light shadow in the main view
-      this.camera.getWorldPosition(this.wpos);
-      this.wpos.x *= -1;
-      this.wpos.y *= -1;
-      this.wpos.z *= 2;
-      this.light2.position.copy(this.wpos);
+      this.adjustCamLight();
 
       this.controls.update();
 
       this.renderer.render(this.scene, this.camera);
+      
       this.renderer2.render(this.scene, this.camera2);
 
     }

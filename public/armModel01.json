@@ -1592,7 +1592,7 @@
 																																																													{
 																																																														"uuid": "d81bb85b-01a6-42aa-830a-b1d0623dcdcb",
 																																																														"type": "Mesh",
-																																																														"name": "head",
+																																																														"name": "joint#robocamref",
 																																																														"castShadow": true,
 																																																														"receiveShadow": true,
 																																																														"layers": 1,
