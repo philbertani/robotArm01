@@ -990,11 +990,6 @@ class GPU {
 
         if (point.object.edgeLength) {
           this.lineObjectElem.innerHTML = "";
-
-          
-          //this.lineObjectElem.innerHTML = "<p>" +
-          //  "<br>Line # and Length is: " + point.object.index + ", " + this.lineLength(point.object.edgeLength);
-          //  + "/p>"
           this.lineObjectElem.innerHTML = this.lineLength(point.object.index, point.object.edgeLength);
         }
 
@@ -1012,6 +1007,7 @@ class GPU {
           this.currentBiggerMouseSphere.position.copy(point.point);
 
           //nb: .color may have been redirected to point to: object.material.uniforms.color.value
+          //not anymore - only in the case of custom shader material
           const cc = pointToUse.object.material.color;
           let colorToUse = cc;
 
@@ -1047,8 +1043,6 @@ class GPU {
           //this is static move out of loop and do only once
           const newColor = new THREE.Color(1-colorToUse.r,1-colorToUse.g,1-colorToUse.b);
           this.currentBiggerMouseSphere.material.color.set(newColor);
-
-          //console.log("xxxxxxxxxxxxxxxxxxxx",pointToUse);
 
           function rr(cc) {
             return Math.trunc(cc*1000)/1000;
@@ -1321,7 +1315,7 @@ class GPU {
       this.controls.update();
 
       this.renderer.render(this.scene, this.camera);
-      
+
       this.renderer2.render(this.scene, this.camera2);
 
     }
