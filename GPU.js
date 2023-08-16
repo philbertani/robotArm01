@@ -84,6 +84,7 @@ class GPU {
   tinkerCadGroup;
   invObjNumMap = {};  //Tinkercad order to Correct order
   robotNum = 0;
+  numRobots = 2;
 
   //keep a bunch of Vector3 handy so we don't have to thrash memory
   light2Pos = new THREE.Vector3();
@@ -417,11 +418,17 @@ class GPU {
       grid.position.z = rootPos.z - railHeight + 1;
       this.scene.add(grid);
 
-      this.prevAngles = Array(this.objects.length).fill(0);
+      this.prevAngles = this.blankArray();
 
       //assuming they start at zero which is not very general
       //we need this to get changes in slider values
-      this.prevSliderValues = Array(this.objects.length).fill(0);
+      this.prevSliderValues = this.blankArray();
+      this.sliderValues = this.blankArray();
+
+      this.savedSliderValues = [];
+      for (let i=0; i<this.numRobots; i++) {
+        this.savedSliderValues.push(this.blankArray());
+      }
 
       function checkObjId(str) {
         if (str[0]==="o") {  //id starts with (o)bject
@@ -681,6 +688,9 @@ class GPU {
   }
 
   //start of class methods ****************************
+  blankArray(n=this.objects.length) {
+    return Array(n).fill(0)
+  }
 
   setParents() {
     const origOrder = Object.keys(this.invObjNumMap);
@@ -972,6 +982,18 @@ class GPU {
     return this.jointSliders[n].value/50-1;
   }
 
+  getSliderValues() {
+    for (let i=0; i<this.jointSliders.length; i++) {
+      this.sliderValues[i] = this.SV(i);
+    }
+  }
+
+  updateSliderValues(arr) {
+    for (let i=0; i<this.jointSliders.length; i++) {
+      this.jointSliders[i].value = (arr[i]+1)*50;
+    }   
+  }
+
   raycastFromCameraToMouse() {
 
     this.raycaster.setFromCamera(this.pointer, this.camera);
@@ -1101,11 +1123,11 @@ class GPU {
   animateArm(time) {
       //this.SV is the function to retrieve (S)lider (V)alues
       const baseJoint = this.joints[0]; //object #20
-      this.objects[baseJoint].setRotationFromAxisAngle(this.fortyfiveXZ,this.SV(0)*Math.PI);
+      this.objects[baseJoint].setRotationFromAxisAngle(this.fortyfiveXZ,this.sliderValues[0]*Math.PI);
 
       for (let i=1; i<3; i++) {
         this.prevAngles[this.joints[i]] = this.objects[this.joints[i]].rotation.y;
-        this.objects[this.joints[i]].rotation.y = this.SV(i)*Math.PI;
+        this.objects[this.joints[i]].rotation.y = this.sliderValues[i]*Math.PI;
       }
 
       const j1 = this.joints[1];
@@ -1120,19 +1142,19 @@ class GPU {
         this.objects[j3].rotation.y -= (this.objects[j2].rotation.y-this.prevAngles[j2]);
       }
       this.prevAngles[j3] = this.objects[j3].rotation.y;
-      const newAngle = this.SV(3)*Math.PI;
+      const newAngle = this.sliderValues[3]*Math.PI;
       const deltaAngle = newAngle - this.prevSliderValues[j3];
       this.prevSliderValues[j3] = newAngle;
       this.objects[j3].rotation.y += deltaAngle;
 
-      this.objects[this.joints[4]].rotation.x = this.SV(4)*Math.PI;
-      this.objects[this.joints[5]].rotation.z = this.SV(5)*Math.PI;
+      this.objects[this.joints[4]].rotation.x = this.sliderValues[4]*Math.PI;
+      this.objects[this.joints[5]].rotation.z = this.sliderValues[5]*Math.PI;
 
       //grasper
-      this.objects[15].position.y = 6 + this.SV(6)*6;
-      this.objects[12].position.y = -6 - this.SV(6)*6;
+      this.objects[15].position.y = 6 + this.sliderValues[6]*6;
+      this.objects[12].position.y = -6 - this.sliderValues[6]*6;
 
-      this.rootPos.y = -this.SV(7)*200;  //root position translation along rail
+      this.rootPos.y = -this.sliderValues[7]*200;  //root position translation along rail
 
       //grasper cam view - #22 is the rail for the 2 grasper claws
       this.objects[17].getWorldPosition(this.wpos); 
@@ -1160,7 +1182,7 @@ class GPU {
      //so far we have different processes for the models created by different
      //programs , need to create an adapter 
     for (let i=0; i<7; i++) {
-      this.newArm.joints[i].rotation.y = this.SV(i)*Math.PI;
+      this.newArm.joints[i].rotation.y = this.sliderValues[i]*Math.PI;
     }
 
     this.newArm.grasper.root.getWorldPosition(this.wpos);
@@ -1252,11 +1274,21 @@ class GPU {
     //remember that this whole group is scaled up by a factor of 4
     this.newArm.position.set(-80,50,this.groundPlane.position.z);
     //this.newArm.rotation.z = Math.PI/4;
-    this.newArm.joints[0].rotation.y = -Math.PI/2 + Math.PI;
+    //this.newArm.joints[0].rotation.y = -Math.PI/2 + Math.PI;
     //this.newArm.joints[1].rotation.y = Math.PI/4;
-    this.newArm.joints[4].rotation.y = -Math.PI/2;
-    this.newArm.joints[5].rotation.y = -Math.PI/2;
-    this.newArm.joints[6].rotation.y = Math.PI/2;
+    //this.newArm.joints[4].rotation.y = -Math.PI/2;
+    //this.newArm.joints[5].rotation.y = -Math.PI/2;
+    //this.newArm.joints[6].rotation.y = Math.PI/2;
+
+    this.getSliderValues();
+    //prevent memory thrashing - do a hard copy
+    this.copySliderValues(this.savedSliderValues[0]);
+  }
+
+  copySliderValues(arr) {
+    for (let i=0; i<this.jointSliders.length; i++) {
+      arr[i] = this.sliderValues[i];
+    }
   }
 
   adjustCamLight() {
@@ -1295,9 +1327,16 @@ class GPU {
       time *= 0.001; //convert from milliseconds to seconds
       frameCount++;
 
+      this.getSliderValues();
+
       const prevRobotNum = this.robotNum;
       this.robotNum = this.getRobotNum();
       if ( prevRobotNum !== this.robotNum) {
+        this.copySliderValues(this.savedSliderValues[prevRobotNum]);
+        
+        this.updateSliderValues(this.savedSliderValues[this.robotNum]);
+        this.getSliderValues();
+
         console.log("we switched robots to ",this.robotNum);
       }
 
